@@ -43,3 +43,6 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# 用户的日记备份文件，永远不进仓库
+日记备份*.json

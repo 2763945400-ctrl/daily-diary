@@ -1,0 +1,40 @@
+# 云端 Mac 自动编译 iOS 安装包（未签名，之后用 SideStore 自签装机）
+name: Build iOS IPA
+
+on:
+  workflow_dispatch: # 手动触发
+  push:
+    branches: [master]
+    paths: # 只有代码变了才编译，改文档不浪费时间
+      - 'lib/**'
+      - 'ios/**'
+      - 'pubspec.yaml'
+      - '.github/workflows/ios-build.yml'
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.44.4
+          cache: true
+
+      - run: flutter pub get
+
+      - run: flutter build ios --release --no-codesign
+
+      - name: Package unsigned IPA
+        run: |
+          mkdir -p Payload
+          cp -r build/ios/iphoneos/Runner.app Payload/
+          zip -qr daily-diary-unsigned.ipa Payload
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: daily-diary-ipa
+          path: daily-diary-unsigned.ipa
+          retention-days: 30
