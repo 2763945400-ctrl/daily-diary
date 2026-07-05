@@ -5,6 +5,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../data/entry_store.dart';
+import '../data/notification_service.dart';
+import '../data/settings_store.dart';
 import '../style.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -15,6 +17,39 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
+  // ── 每日提醒 ──────────────────────────────────────────
+
+  Future<void> _toggleReminder(bool value) async {
+    if (value) {
+      final granted = await NotificationService.requestPermission();
+      if (!granted) {
+        _toast('系统未允许通知。请到 iPhone 的「设置 → 通知 → 每日一记」里打开');
+        return;
+      }
+    }
+    await SettingsStore.setReminderEnabled(value);
+    await NotificationService.schedule();
+    setState(() {});
+  }
+
+  Future<void> _pickReminderTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(
+        hour: SettingsStore.reminderHour,
+        minute: SettingsStore.reminderMinute,
+      ),
+    );
+    if (picked == null) return;
+    await SettingsStore.setReminderTime(picked.hour, picked.minute);
+    await NotificationService.schedule();
+    setState(() {});
+  }
+
+  String get _reminderTimeLabel =>
+      '${SettingsStore.reminderHour.toString().padLeft(2, '0')}:'
+      '${SettingsStore.reminderMinute.toString().padLeft(2, '0')}';
+
   // ── 导出 ──────────────────────────────────────────────
 
   Future<void> _export() async {
@@ -139,6 +174,30 @@ class _SettingsPageState extends State<SettingsPage> {
                 ?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 24),
+          if (!kIsWeb) ...[
+            _sectionLabel('提醒'),
+            _card([
+              SwitchListTile(
+                secondary: const Icon(Icons.notifications_outlined),
+                title: const Text('每日提醒'),
+                value: SettingsStore.reminderEnabled,
+                onChanged: _toggleReminder,
+              ),
+              if (SettingsStore.reminderEnabled) ...[
+                const Divider(height: 1, indent: 56),
+                ListTile(
+                  leading: const Icon(Icons.schedule_outlined),
+                  title: const Text('提醒时间'),
+                  subtitle: const Text('当天已记录时自动跳过',
+                      style: TextStyle(fontSize: 12)),
+                  trailing: Text(_reminderTimeLabel,
+                      style: const TextStyle(fontSize: 16)),
+                  onTap: _pickReminderTime,
+                ),
+              ],
+            ]),
+            const SizedBox(height: 24),
+          ],
           _sectionLabel('数据'),
           _card([
             ListTile(

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../data/entry_store.dart';
+import '../data/notification_service.dart';
 import '../style.dart';
 
 class TodayPage extends StatefulWidget {
@@ -56,6 +57,7 @@ class _TodayPageState extends State<TodayPage> {
     );
     if (entry.isEmpty) return;
     await EntryStore.put(entry);
+    await NotificationService.schedule(); // 今天记过了,当晚的提醒自动跳过
     setState(() => _existing = entry);
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(

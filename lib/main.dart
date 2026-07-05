@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import 'data/entry_store.dart';
+import 'data/notification_service.dart';
+import 'data/settings_store.dart';
 import 'pages/review_page.dart';
 import 'pages/settings_page.dart';
 import 'pages/today_page.dart';
@@ -8,6 +10,9 @@ import 'pages/today_page.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await EntryStore.init();
+  await SettingsStore.init();
+  await NotificationService.init();
+  await NotificationService.schedule(); // 启动时校准下一次提醒
   runApp(const DiaryApp());
 }
 
