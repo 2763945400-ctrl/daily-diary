@@ -47,6 +47,7 @@ class _TodayPageState extends State<TodayPage> {
   }
 
   Future<void> _save() async {
+    FocusManager.instance.primaryFocus?.unfocus(); // 保存时收起键盘
     final now = DateTime.now();
     final entry = Entry(
       date: EntryStore.todayKey(),
@@ -71,10 +72,16 @@ class _TodayPageState extends State<TodayPage> {
     final streak = EntryStore.streak();
     final scheme = Theme.of(context).colorScheme;
 
-    return SafeArea(
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
-        children: [
+    return GestureDetector(
+      // 点输入框以外的空白处收起键盘
+      onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+      behavior: HitTestBehavior.translucent,
+      child: SafeArea(
+        child: ListView(
+          // 列表下滑时收起键盘
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
+          children: [
           Text(
             '${now.month}月${now.day}日 ${weekdays[now.weekday - 1]}',
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
@@ -164,7 +171,8 @@ class _TodayPageState extends State<TodayPage> {
               style: const TextStyle(fontSize: 16),
             ),
           ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'data/entry_store.dart';
 import 'data/notification_service.dart';
@@ -26,6 +27,13 @@ class DiaryApp extends StatelessWidget {
     return MaterialApp(
       title: '每日一记',
       debugShowCheckedModeBanner: false,
+      locale: const Locale('zh'),
+      supportedLocales: const [Locale('zh'), Locale('en')],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: scheme,
