@@ -12,8 +12,12 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await EntryStore.init();
   await SettingsStore.init();
-  await NotificationService.init();
-  await NotificationService.schedule(); // 启动时校准下一次提醒
+  try {
+    await NotificationService.init();
+    await NotificationService.schedule(); // 启动时校准下一次提醒
+  } catch (_) {
+    // 提醒系统出问题不能挡住日记本身,静默降级
+  }
   runApp(const DiaryApp());
 }
 
@@ -59,7 +63,8 @@ class _HomeShellState extends State<HomeShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _pages[_index],
+      // IndexedStack: 三页常驻只切换显示,切标签不丢「今天」页的未保存草稿
+      body: IndexedStack(index: _index, children: _pages),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
         onDestinationSelected: (i) => setState(() => _index = i),

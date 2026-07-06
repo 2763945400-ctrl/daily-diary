@@ -14,23 +14,52 @@ class TodayPage extends StatefulWidget {
   State<TodayPage> createState() => _TodayPageState();
 }
 
-class _TodayPageState extends State<TodayPage> {
+class _TodayPageState extends State<TodayPage> with WidgetsBindingObserver {
   final _textController = TextEditingController();
   Uint8List? _photo;
   Entry? _existing;
+  String _loadedDate = ''; // 本页面当前绑定的日期,编辑和保存都以它为准
 
   @override
   void initState() {
     super.initState();
-    _existing = EntryStore.get(EntryStore.todayKey());
-    if (_existing != null) {
-      _textController.text = _existing!.text;
-      _photo = _existing!.photo;
+    WidgetsBinding.instance.addObserver(this);
+    _load();
+  }
+
+  void _load() {
+    _loadedDate = EntryStore.todayKey();
+    _existing = EntryStore.get(_loadedDate);
+    _textController.text = _existing?.text ?? '';
+    _photo = _existing?.photo;
+  }
+
+  /// 有没有还没保存的改动。
+  bool get _isDirty =>
+      _textController.text.trim() != (_existing?.text ?? '') ||
+      !identical(_photo, _existing?.photo);
+
+  /// 日期翻篇了且没有未保存的草稿 → 换到新的一天。
+  /// 有草稿时不换:半夜写的日记属于开始写的那一天。
+  void _maybeRollover() {
+    if (_loadedDate == EntryStore.todayKey() || _isDirty) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _loadedDate != EntryStore.todayKey() && !_isDirty) {
+        setState(_load);
+      }
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) {
+      setState(() {}); // 从后台回来时触发重画,让 _maybeRollover 检查日期
     }
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _textController.dispose();
     super.dispose();
   }
@@ -50,7 +79,7 @@ class _TodayPageState extends State<TodayPage> {
     FocusManager.instance.primaryFocus?.unfocus(); // 保存时收起键盘
     final now = DateTime.now();
     final entry = Entry(
-      date: EntryStore.todayKey(),
+      date: _loadedDate, // 存到页面绑定的日期,跨午夜也不会记错天
       text: _textController.text.trim(),
       photo: _photo,
       createdAt: _existing?.createdAt ?? now,
@@ -59,8 +88,8 @@ class _TodayPageState extends State<TodayPage> {
     if (entry.isEmpty) return;
     await EntryStore.put(entry);
     await NotificationService.schedule(); // 今天记过了,当晚的提醒自动跳过
-    setState(() => _existing = entry);
     if (!mounted) return;
+    setState(() => _existing = entry);
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('已记下今天 ✓'), behavior: SnackBarBehavior.floating),
     );
@@ -68,7 +97,8 @@ class _TodayPageState extends State<TodayPage> {
 
   @override
   Widget build(BuildContext context) {
-    final now = DateTime.now();
+    _maybeRollover();
+    final day = DateTime.parse(_loadedDate);
     final streak = EntryStore.streak();
     final scheme = Theme.of(context).colorScheme;
 
@@ -83,7 +113,7 @@ class _TodayPageState extends State<TodayPage> {
           padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
           children: [
           Text(
-            '${now.month}月${now.day}日 ${weekdays[now.weekday - 1]}',
+            '${day.month}月${day.day}日 ${weekdays[day.weekday - 1]}',
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
