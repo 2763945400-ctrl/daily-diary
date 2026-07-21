@@ -57,7 +57,8 @@ class NotificationService {
   /// 之后每天同一时间重复。每次保存日记后调用本方法，实现"记过当天不再催"。
   static Future<void> schedule() async {
     if (!_ready) return;
-    await _plugin.cancelAll();
+    // 只取消每日提醒（id 0），不动冥想钟声（id 1）
+    await _plugin.cancel(id: 0);
     if (!SettingsStore.reminderEnabled) return;
 
     final now = tz.TZDateTime.now(tz.local);
@@ -80,5 +81,28 @@ class NotificationService {
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       matchDateTimeComponents: DateTimeComponents.time,
     );
+  }
+
+  /// 冥想结束的钟声通知（id 1）：静坐时锁屏/退后台的兜底闹钟，
+  /// iOS 用打包进 App 的自定义音 bell.wav。
+  static Future<void> scheduleMeditationBell(DateTime when) async {
+    if (!_ready) return;
+    await _plugin.zonedSchedule(
+      id: 1,
+      title: '静坐结束',
+      body: '慢慢回来',
+      scheduledDate: tz.TZDateTime.from(when, tz.local),
+      notificationDetails: const NotificationDetails(
+        android: AndroidNotificationDetails('meditation_bell', '冥想钟声'),
+        iOS: DarwinNotificationDetails(sound: 'bell.wav'),
+      ),
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+    );
+  }
+
+  /// 撤销冥想钟声（前台自己播、或提前结束时调用）。
+  static Future<void> cancelMeditationBell() async {
+    if (!_ready) return;
+    await _plugin.cancel(id: 1);
   }
 }

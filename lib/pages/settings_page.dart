@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../data/entry_store.dart';
+import '../data/note_store.dart';
 import '../data/notification_service.dart';
 import '../data/settings_store.dart';
 import '../style.dart';
@@ -54,13 +55,14 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _export() async {
     final entries = EntryStore.all();
-    if (entries.isEmpty) {
+    final notes = NoteStore.all();
+    if (entries.isEmpty && notes.isEmpty) {
       _toast('还没有任何记录，无需备份');
       return;
     }
     final data = {
       'app': 'daily_diary',
-      'version': 1,
+      'version': 2,
       'exportedAt': DateTime.now().toIso8601String(),
       'entries': [
         for (final e in entries)
@@ -72,11 +74,19 @@ class _SettingsPageState extends State<SettingsPage> {
             'updatedAt': e.updatedAt.millisecondsSinceEpoch,
           },
       ],
+      'notes': [
+        for (final n in notes)
+          {
+            'id': n.id,
+            'text': n.text,
+            'createdAt': n.createdAt.millisecondsSinceEpoch,
+          },
+      ],
     };
     final bytes = Uint8List.fromList(utf8.encode(jsonEncode(data)));
     final name = '日记备份-${EntryStore.todayKey()}.json';
     await FilePicker.saveFile(fileName: name, bytes: bytes);
-    _toast('已导出 ${entries.length} 条记录');
+    _toast('已导出 ${entries.length} 条日记、${notes.length} 条碎片');
   }
 
   // ── 导入 ──────────────────────────────────────────────
@@ -110,6 +120,21 @@ class _SettingsPageState extends State<SettingsPage> {
         ));
         added++;
       }
+      // version 2 起有碎片；旧版备份没有 notes 字段，跳过即可
+      for (final raw in (data['notes'] as List?) ?? const []) {
+        final m = raw as Map<String, dynamic>;
+        final id = m['id'] as String;
+        if (NoteStore.has(id)) {
+          skipped++;
+          continue;
+        }
+        await NoteStore.put(Note(
+          id: id,
+          text: (m['text'] as String?) ?? '',
+          createdAt: DateTime.fromMillisecondsSinceEpoch(m['createdAt'] as int),
+        ));
+        added++;
+      }
     } catch (_) {
       _toast('这个文件不是有效的日记备份');
       return;
@@ -122,7 +147,8 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _clearAll() async {
     final count = EntryStore.count;
-    if (count == 0) {
+    final noteCount = NoteStore.count;
+    if (count == 0 && noteCount == 0) {
       _toast('没有可清空的记录');
       return;
     }
@@ -130,7 +156,8 @@ class _SettingsPageState extends State<SettingsPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('清空全部数据？'),
-        content: Text('将永久删除全部 $count 条记录（含照片），无法恢复。\n建议先导出备份。'),
+        content: Text(
+            '将永久删除全部 $count 条日记和 $noteCount 条碎片（含照片），无法恢复。\n建议先导出备份。'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -146,6 +173,7 @@ class _SettingsPageState extends State<SettingsPage> {
     );
     if (confirmed != true) return;
     await EntryStore.clearAll();
+    await NoteStore.clearAll();
     setState(() {});
     _toast('已清空全部数据');
   }
@@ -203,7 +231,8 @@ class _SettingsPageState extends State<SettingsPage> {
             ListTile(
               leading: const Icon(Icons.file_download_outlined),
               title: const Text('导出备份'),
-              subtitle: Text('当前共 ${EntryStore.count} 条记录',
+              subtitle: Text(
+                  '${EntryStore.count} 条日记 · ${NoteStore.count} 条碎片',
                   style: const TextStyle(fontSize: 12)),
               onTap: _export,
             ),

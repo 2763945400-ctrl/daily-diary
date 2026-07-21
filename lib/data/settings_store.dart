@@ -23,4 +23,11 @@ class SettingsStore {
     await _box.put('reminderHour', hour);
     await _box.put('reminderMinute', minute);
   }
+
+  /// 上次选的静坐时长（分钟），默认 10。
+  static int get meditationMinutes =>
+      _box.get('meditationMinutes', defaultValue: 10) as int;
+
+  static Future<void> setMeditationMinutes(int value) =>
+      _box.put('meditationMinutes', value);
 }

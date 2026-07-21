@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'data/entry_store.dart';
+import 'data/note_store.dart';
 import 'data/notification_service.dart';
 import 'data/settings_store.dart';
 import 'pages/review_page.dart';
@@ -11,6 +12,7 @@ import 'pages/today_page.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await EntryStore.init();
+  await NoteStore.init();
   await SettingsStore.init();
   try {
     await NotificationService.init();

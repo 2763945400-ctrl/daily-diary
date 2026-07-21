@@ -1,11 +1,12 @@
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../data/entry_store.dart';
+import '../data/note_store.dart';
 import '../data/notification_service.dart';
 import '../style.dart';
+import 'meditate_page.dart';
 
 class TodayPage extends StatefulWidget {
   const TodayPage({super.key});
@@ -16,6 +17,8 @@ class TodayPage extends StatefulWidget {
 
 class _TodayPageState extends State<TodayPage> with WidgetsBindingObserver {
   final _textController = TextEditingController();
+  final _noteController = TextEditingController(); // 碎片速记条
+  final _noteFocus = FocusNode();
   Uint8List? _photo;
   Entry? _existing;
   String _loadedDate = ''; // 本页面当前绑定的日期,编辑和保存都以它为准
@@ -61,7 +64,48 @@ class _TodayPageState extends State<TodayPage> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _textController.dispose();
+    _noteController.dispose();
+    _noteFocus.dispose();
     super.dispose();
+  }
+
+  /// 记下一条碎片：轻触感反馈，清空输入框但键盘不收起，便于连续记。
+  Future<void> _saveNote() async {
+    final text = _noteController.text.trim();
+    if (text.isEmpty) return;
+    HapticFeedback.lightImpact();
+    final now = DateTime.now();
+    await NoteStore.put(Note(
+      id: now.millisecondsSinceEpoch.toString(),
+      text: text,
+      createdAt: now,
+    ));
+    _noteController.clear();
+    _noteFocus.requestFocus();
+  }
+
+  /// 把碎片并入日记草稿：前面有内容则换行分隔；碎片保留，由用户自己决定何时删。
+  void _mergeNote(Note note) {
+    final current = _textController.text;
+    _textController.text =
+        current.trim().isEmpty ? note.text : '$current\n${note.text}';
+    setState(() {}); // 刷新「记下今天」的脏状态判断
+  }
+
+  /// 删除碎片：无确认弹窗直接删，SnackBar 给「撤销」。
+  Future<void> _deleteNote(Note note) async {
+    await NoteStore.delete(note.id);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('碎片已删除'),
+        behavior: SnackBarBehavior.floating,
+        action: SnackBarAction(
+          label: '撤销',
+          onPressed: () => NoteStore.put(note),
+        ),
+      ),
+    );
   }
 
   Future<void> _pickPhoto() async {
@@ -126,6 +170,93 @@ class _TodayPageState extends State<TodayPage> with WidgetsBindingObserver {
                 ),
           ),
           const SizedBox(height: 24),
+          // 碎片速记条：想到什么先卸下，不打断写日记
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _noteController,
+                  focusNode: _noteFocus,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => _saveNote(),
+                  decoration: InputDecoration(
+                    hintText: '此刻的想法，随手记下',
+                    hintStyle: const TextStyle(color: hintColor),
+                    filled: true,
+                    fillColor: cardFill,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: FilledButton.tonal(
+                  onPressed: _saveNote,
+                  style: FilledButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14)),
+                  ),
+                  child: const Text('记下'),
+                ),
+              ),
+            ],
+          ),
+          // 今天的碎片：「并入」追加进日记草稿，「删除」可撤销
+          ValueListenableBuilder(
+            valueListenable: NoteStore.listenable,
+            builder: (context, _, _) {
+              final notes = NoteStore.todays();
+              if (notes.isEmpty) return const SizedBox.shrink();
+              return Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: Column(
+                  children: [for (final n in notes) _noteTile(n, scheme)],
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 16),
+          // 静坐入口：全屏页，返回后无状态牵连
+          InkWell(
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const MeditatePage()),
+            ),
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                color: cardFill,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.self_improvement, color: scheme.outline),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('先静坐片刻',
+                            style: TextStyle(fontWeight: FontWeight.w600)),
+                        Text('清空思绪，再写今天',
+                            style: TextStyle(
+                                fontSize: 12, color: scheme.outline)),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.chevron_right, color: scheme.outline),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
           // 文字卡片
           TextField(
             controller: _textController,
@@ -203,6 +334,46 @@ class _TodayPageState extends State<TodayPage> with WidgetsBindingObserver {
           ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// 一条碎片：时间 + 文本，右侧「并入」「删除」两个小操作。
+  Widget _noteTile(Note note, ColorScheme scheme) {
+    final time =
+        '${note.createdAt.hour.toString().padLeft(2, '0')}:'
+        '${note.createdAt.minute.toString().padLeft(2, '0')}';
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.fromLTRB(16, 10, 8, 10),
+      decoration: BoxDecoration(
+        color: cardFill,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(time,
+                    style: TextStyle(fontSize: 11, color: scheme.outline)),
+                const SizedBox(height: 2),
+                Text(note.text),
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: () => _mergeNote(note),
+            child: const Text('并入'),
+          ),
+          TextButton(
+            onPressed: () => _deleteNote(note),
+            style: TextButton.styleFrom(foregroundColor: scheme.outline),
+            child: const Text('删除'),
+          ),
+        ],
       ),
     );
   }
