@@ -45,12 +45,18 @@ class EntryStore {
     _box = await Hive.openBox('entries');
   }
 
+  static const int dayStartHour = 2; // 一天从凌晨2点开始
+
   static String dateKey(DateTime d) =>
       '${d.year.toString().padLeft(4, '0')}-'
       '${d.month.toString().padLeft(2, '0')}-'
       '${d.day.toString().padLeft(2, '0')}';
 
-  static String todayKey() => dateKey(DateTime.now());
+  /// 逻辑日期键：凌晨2点前算前一天。全 App 的"今天"都以这里为准。
+  static String logicalKey(DateTime t) =>
+      dateKey(t.subtract(const Duration(hours: dayStartHour)));
+
+  static String todayKey() => logicalKey(DateTime.now());
 
   static Entry? get(String date) {
     final raw = _box.get(date);
@@ -68,9 +74,9 @@ class EntryStore {
     return keys.map((k) => get(k)!).toList();
   }
 
-  /// 连续记录天数：从今天（或昨天，如果今天还没记）往回数。
+  /// 连续记录天数：从逻辑今天（或逻辑昨天，如果今天还没记）往回数。
   static int streak() {
-    var day = DateTime.now();
+    var day = DateTime.now().subtract(const Duration(hours: dayStartHour));
     if (!_box.containsKey(dateKey(day))) {
       day = day.subtract(const Duration(days: 1));
     }

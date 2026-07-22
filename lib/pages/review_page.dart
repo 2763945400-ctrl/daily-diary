@@ -16,7 +16,9 @@ class _ReviewPageState extends State<ReviewPage> {
   @override
   void initState() {
     super.initState();
-    final now = DateTime.now();
+    // 逻辑今天：凌晨跨月那一刻，月历默认停在逻辑当月
+    final now =
+        DateTime.now().subtract(const Duration(hours: EntryStore.dayStartHour));
     _month = DateTime(now.year, now.month);
   }
 
@@ -112,7 +114,7 @@ class _ReviewPageState extends State<ReviewPage> {
 
   Widget _buildCalendar(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final today = DateTime.now();
+    final todayKey = EntryStore.todayKey(); // 逻辑今天（凌晨2点前算前一天）
     final daysInMonth = DateTime(_month.year, _month.month + 1, 0).day;
     final leadingBlanks = DateTime(_month.year, _month.month, 1).weekday - 1;
 
@@ -123,9 +125,7 @@ class _ReviewPageState extends State<ReviewPage> {
     for (var day = 1; day <= daysInMonth; day++) {
       final date = DateTime(_month.year, _month.month, day);
       final entry = EntryStore.get(EntryStore.dateKey(date));
-      final isToday = date.year == today.year &&
-          date.month == today.month &&
-          date.day == today.day;
+      final isToday = EntryStore.dateKey(date) == todayKey;
 
       cells.add(InkWell(
         onTap: entry == null ? null : () => _showDetail(entry),

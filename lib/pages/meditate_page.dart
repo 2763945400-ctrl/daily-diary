@@ -2,11 +2,13 @@ import 'dart:async';
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../data/notification_service.dart';
 import '../data/settings_store.dart';
 
 /// 静坐页：全屏深色，独立于底部导航。
+/// 进来即自动开始（用上次/默认时长），中央呼吸圆环，底部可低调改时长。
 /// 唤醒是双保险——预约系统通知兜底锁屏/后台，前台则渐强播放钟声。
 class MeditatePage extends StatefulWidget {
   const MeditatePage({super.key});
@@ -15,27 +17,42 @@ class MeditatePage extends StatefulWidget {
   State<MeditatePage> createState() => _MeditatePageState();
 }
 
-enum _Phase { ready, running, done }
+enum _Phase { running, done }
 
-class _MeditatePageState extends State<MeditatePage> with WidgetsBindingObserver {
+class _MeditatePageState extends State<MeditatePage>
+    with WidgetsBindingObserver, TickerProviderStateMixin {
   static const _options = [5, 10, 15, 20];
 
-  _Phase _phase = _Phase.ready;
+  _Phase _phase = _Phase.running;
   int _minutes = SettingsStore.meditationMinutes;
   DateTime? _endTime; // 以真实时间判定结束，不靠 Timer 计数
   Timer? _ticker;
   AudioPlayer? _player; // 渐强播放专用实例，不影响别处
   Timer? _fadeTimer;
 
+  // 呼吸圆环：一次完整呼吸约 7 秒，涨缩 + 明暗联动
+  late final AnimationController _breath = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 7000),
+  )..repeat(reverse: true);
+  late final Animation<double> _breathAnim =
+      CurvedAnimation(parent: _breath, curve: Curves.easeInOut);
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // 进页面即开始：直接给字段赋值（initState 里不能 setState）
+    SettingsStore.setMeditationMinutes(_minutes); // 记住上次选择
+    _endTime = DateTime.now().add(Duration(minutes: _minutes));
+    NotificationService.scheduleMeditationBell(_endTime!); // 锁屏/后台兜底
+    _ticker = Timer.periodic(const Duration(seconds: 1), (_) => _tick());
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _breath.dispose();
     _ticker?.cancel();
     _fadeTimer?.cancel();
     _player?.dispose();
@@ -54,15 +71,17 @@ class _MeditatePageState extends State<MeditatePage> with WidgetsBindingObserver
     }
   }
 
-  void _start() {
-    final end = DateTime.now().add(Duration(minutes: _minutes));
-    SettingsStore.setMeditationMinutes(_minutes); // 记住上次选择
+  /// 底部时长微调：把计时重置为新时长继续走。
+  void _changeDuration(int m) {
+    if (m == _minutes) return;
+    HapticFeedback.lightImpact();
+    SettingsStore.setMeditationMinutes(m); // 记住上次选择
+    final end = DateTime.now().add(Duration(minutes: m));
+    NotificationService.scheduleMeditationBell(end); // 重新约兜底通知
     setState(() {
-      _phase = _Phase.running;
+      _minutes = m;
       _endTime = end;
     });
-    NotificationService.scheduleMeditationBell(end); // 锁屏/后台兜底
-    _ticker = Timer.periodic(const Duration(seconds: 1), (_) => _tick());
   }
 
   void _tick() {
@@ -128,16 +147,60 @@ class _MeditatePageState extends State<MeditatePage> with WidgetsBindingObserver
         child: SafeArea(
           child: Stack(
             children: [
-              Center(child: _center(dim, dimmer)),
-              if (_phase == _Phase.ready)
+              Center(child: _center(dim)),
+              if (_phase == _Phase.running) ...[
+                // 左上 ✕：等同「提前结束」
                 Positioned(
                   top: 4,
                   left: 4,
                   child: IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
+                    onPressed: _abort,
                     icon: const Icon(Icons.close, color: dim),
                   ),
                 ),
+                // 底部：低调时长微调 + 提前结束
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 24,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          for (final m in _options)
+                            GestureDetector(
+                              onTap: () => _changeDuration(m),
+                              behavior: HitTestBehavior.opaque,
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 10),
+                                child: Text(
+                                  '$m',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    color: _minutes == m
+                                        ? Colors.white
+                                        : dimmer,
+                                    fontWeight: _minutes == m
+                                        ? FontWeight.w600
+                                        : FontWeight.w400,
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      TextButton(
+                        onPressed: _abort,
+                        child: Text('提前结束', style: TextStyle(color: dimmer)),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -145,60 +208,46 @@ class _MeditatePageState extends State<MeditatePage> with WidgetsBindingObserver
     );
   }
 
-  Widget _center(Color dim, Color dimmer) {
+  Widget _center(Color dim) {
     switch (_phase) {
-      case _Phase.ready:
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('坐多久？', style: TextStyle(color: dim, fontSize: 15)),
-            const SizedBox(height: 20),
-            Wrap(
-              spacing: 12,
-              children: [
-                for (final m in _options)
-                  ChoiceChip(
-                    label: Text('$m 分钟'),
-                    selected: _minutes == m,
-                    onSelected: (_) => setState(() => _minutes = m),
-                    backgroundColor: Colors.transparent,
-                    selectedColor: const Color(0x22FFFFFF),
-                    labelStyle:
-                        TextStyle(color: _minutes == m ? Colors.white : dim),
-                    side: BorderSide(
-                        color: _minutes == m ? dim : Colors.transparent),
-                    showCheckmark: false,
-                  ),
-              ],
-            ),
-            const SizedBox(height: 40),
-            FilledButton(
-              onPressed: _start,
-              style: FilledButton.styleFrom(
-                backgroundColor: const Color(0x1FFFFFFF),
-                foregroundColor: Colors.white,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 48, vertical: 16),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(32)),
-              ),
-              child: const Text('开始', style: TextStyle(fontSize: 16)),
-            ),
-          ],
-        );
       case _Phase.running:
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // 只显示分钟不显示秒，避免盯屏
-            Text('还剩 $_remainingMinutes 分钟',
-                style: TextStyle(color: dim, fontSize: 17)),
-            const SizedBox(height: 32),
-            TextButton(
-              onPressed: _abort,
-              child: Text('提前结束', style: TextStyle(color: dimmer)),
-            ),
-          ],
+        // 呼吸圆环：光圈缓慢一涨一缩，圆心显示剩余分钟（只给分钟不给秒）
+        return AnimatedBuilder(
+          animation: _breathAnim,
+          builder: (context, _) {
+            final t = _breathAnim.value; // 0↔1 随呼吸往返
+            return Stack(
+              alignment: Alignment.center,
+              children: [
+                Transform.scale(
+                  scale: 0.82 + 0.18 * t,
+                  child: Opacity(
+                    opacity: 0.75 + 0.25 * t,
+                    child: Container(
+                      width: 220,
+                      height: 220,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(
+                          colors: [
+                            Color.fromRGBO(143, 184, 156, 0.45),
+                            Color.fromRGBO(143, 184, 156, 0.15),
+                            Color.fromRGBO(143, 184, 156, 0.0),
+                          ],
+                          stops: [0.0, 0.65, 1.0],
+                        ),
+                        border: Border.fromBorderSide(BorderSide(
+                          color: Color.fromRGBO(143, 184, 156, 0.25),
+                        )),
+                      ),
+                    ),
+                  ),
+                ),
+                Text('还剩 $_remainingMinutes 分钟',
+                    style: TextStyle(color: dim, fontSize: 17)),
+              ],
+            );
+          },
         );
       case _Phase.done:
         return Text('慢慢回来', style: TextStyle(color: dim, fontSize: 15));

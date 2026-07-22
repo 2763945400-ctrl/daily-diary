@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
+import 'entry_store.dart';
+
 /// 一条碎片：随时卸下的只言片语，id 是毫秒时间戳字符串。
 class Note {
   final String id;
@@ -42,14 +44,11 @@ class NoteStore {
     return keys.map((k) => Note.fromMap(k, _box.get(k) as Map)).toList();
   }
 
-  /// 今天的碎片，新的在前。
+  /// 逻辑今天的碎片（凌晨2点前记的统一归到前一天），新的在前。
   static List<Note> todays() {
-    final now = DateTime.now();
+    final key = EntryStore.todayKey();
     return all()
-        .where((n) =>
-            n.createdAt.year == now.year &&
-            n.createdAt.month == now.month &&
-            n.createdAt.day == now.day)
+        .where((n) => EntryStore.logicalKey(n.createdAt) == key)
         .toList();
   }
 
