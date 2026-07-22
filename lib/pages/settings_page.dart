@@ -274,11 +274,11 @@ class _SettingsPageState extends State<SettingsPage> {
         child: Text(text, style: const TextStyle(fontSize: 13, color: hintColor)),
       );
 
-  Widget _card(List<Widget> children) => Container(
-        decoration: BoxDecoration(
-          color: cardFill,
-          borderRadius: BorderRadius.circular(16),
-        ),
+  // 用 Material 而不是带底色的 Container:否则 ListTile 的水波纹/底色
+  // 会被 DecoratedBox 盖住,控制台抛 "ink splashes may be invisible"。
+  Widget _card(List<Widget> children) => Material(
+        color: cardFill,
+        borderRadius: BorderRadius.circular(16),
         clipBehavior: Clip.antiAlias,
         child: Column(children: children),
       );
