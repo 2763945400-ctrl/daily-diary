@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
@@ -45,6 +46,19 @@ class DiaryApp extends StatelessWidget {
         colorScheme: scheme,
         scaffoldBackgroundColor: Colors.white,
       ),
+      // 网页版在宽屏上把整个 App 收成手机宽度居中，两侧留灰底。
+      // kIsWeb 判断保证手机 App 不进这段，行为完全不变。
+      builder: kIsWeb
+          ? (context, child) => ColoredBox(
+                color: const Color(0xFFEDEDED),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 520),
+                    child: child,
+                  ),
+                ),
+              )
+          : null,
       home: const HomeShell(),
     );
   }
