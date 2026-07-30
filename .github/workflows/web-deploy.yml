@@ -42,9 +42,8 @@ jobs:
       # 少了这个，打开是白屏
       - run: flutter build web --release --base-href /daily-diary/
 
+      # 前提：仓库 Settings → Pages → Source 已选 "GitHub Actions"
       - uses: actions/configure-pages@v5
-        with:
-          enablement: true # 仓库还没开 Pages 的话自动开
 
       - uses: actions/upload-pages-artifact@v3
         with:
