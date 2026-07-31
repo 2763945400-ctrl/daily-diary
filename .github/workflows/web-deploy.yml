@@ -40,7 +40,10 @@ jobs:
 
       # base-href 必须写成 /仓库名/，项目页网址是 用户名.github.io/仓库名/
       # 少了这个，打开是白屏
-      - run: flutter build web --release --base-href /daily-diary/
+      #
+      # --no-web-resources-cdn：渲染引擎 CanvasKit(约 7MB) 默认从 www.gstatic.com 下载，
+      # 国内连不上就一直白屏且不报错。加这个参数改成打包进自己的站点。
+      - run: flutter build web --release --base-href /daily-diary/ --no-web-resources-cdn
 
       # 前提：仓库 Settings → Pages → Source 已选 "GitHub Actions"
       - uses: actions/configure-pages@v5

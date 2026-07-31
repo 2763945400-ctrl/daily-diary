@@ -45,6 +45,9 @@ class DiaryApp extends StatelessWidget {
         useMaterial3: true,
         colorScheme: scheme,
         scaffoldBackgroundColor: Colors.white,
+        // 网页版用打包进来的中文字体，避免去 Google 现取字形（国内连不上）。
+        // 手机端传 null，继续用系统苹方，观感不变。
+        fontFamily: kIsWeb ? 'NotoSansSC' : null,
       ),
       // 网页版在宽屏上把整个 App 收成手机宽度居中，两侧留灰底。
       // kIsWeb 判断保证手机 App 不进这段，行为完全不变。

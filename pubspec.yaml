@@ -70,6 +70,14 @@ flutter:
   assets:
     - assets/audio/bell.wav
 
+  # 网页版专用中文字体（GB2312 子集，6763 简体汉字）。
+  # 不打包的话 Flutter 会去 fonts.gstatic.com 现取中文字形，国内连不上就显示方块。
+  # 只有 web 会用它（见 main.dart 的 kIsWeb 判断），iPhone 仍用系统苹方字体。
+  fonts:
+    - family: NotoSansSC
+      fonts:
+        - asset: assets/fonts/NotoSansSC-subset.ttf
+
   # To add assets to your application, add an assets section, like this:
   # assets:
   #   - images/a_dot_burr.jpeg
