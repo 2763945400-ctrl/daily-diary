@@ -60,8 +60,12 @@ jobs:
         with:
           node-version: '22'
 
-      - name: 上传到 EdgeOne Pages
+      # 这个产品从 "Pages" 改名成了 "Makers"，两套官方文档里的子命令不一致
+      # （一处写 pages deploy，一处写 makers deploy）。两种都试一遍，哪个通用哪个。
+      - name: 上传到 EdgeOne
         if: steps.check.outputs.ready == 'true'
-        run: npx edgeone pages deploy build/web -n daily-diary -t "$EDGEONE_API_TOKEN"
+        run: |
+          npx edgeone makers deploy build/web -n daily-diary -t "$EDGEONE_API_TOKEN" \
+            || npx edgeone pages deploy build/web -n daily-diary -t "$EDGEONE_API_TOKEN"
         env:
           EDGEONE_API_TOKEN: ${{ secrets.EDGEONE_API_TOKEN }}
