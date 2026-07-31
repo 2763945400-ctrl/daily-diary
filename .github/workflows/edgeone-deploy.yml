@@ -64,8 +64,9 @@ jobs:
       # （一处写 pages deploy，一处写 makers deploy）。两种都试一遍，哪个通用哪个。
       - name: 上传到 EdgeOne
         if: steps.check.outputs.ready == 'true'
+        # --yes：npx 首次安装包会弹交互确认，CI 里没法回答，必须显式跳过
         run: |
-          npx edgeone makers deploy build/web -n daily-diary -t "$EDGEONE_API_TOKEN" \
-            || npx edgeone pages deploy build/web -n daily-diary -t "$EDGEONE_API_TOKEN"
+          npx --yes edgeone makers deploy build/web -n daily-diary -t "$EDGEONE_API_TOKEN" \
+            || npx --yes edgeone pages deploy build/web -n daily-diary -t "$EDGEONE_API_TOKEN"
         env:
           EDGEONE_API_TOKEN: ${{ secrets.EDGEONE_API_TOKEN }}
