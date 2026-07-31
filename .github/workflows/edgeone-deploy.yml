@@ -1,0 +1,67 @@
+# 编译网页版并发布到腾讯云 EdgeOne Pages（国内可访问的托管）
+#
+# 和 web-deploy.yml 的关系：两条独立流水线，同一份代码发到两个地方，
+# 方便对比国内访问速度。GitHub Pages 那份保留不动。
+#
+# 差别只有 base-href：EdgeOne 给的是根域名 项目名.edgeone.app，所以是 /；
+# GitHub Pages 是子路径，所以是 /daily-diary/。
+#
+# 前提：仓库 Settings → Secrets and variables → Actions 里
+#       添加名为 EDGEONE_API_TOKEN 的 secret。没配置时本流水线自动跳过，不报错。
+name: Deploy EdgeOne
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [master]
+    paths:
+      - 'lib/**'
+      - 'web/**'
+      - 'assets/**'
+      - 'pubspec.yaml'
+      - '.github/workflows/edgeone-deploy.yml'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检查是否已配置 API Token
+        id: check
+        env:
+          TOKEN: ${{ secrets.EDGEONE_API_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "ready=false" >> $GITHUB_OUTPUT
+            echo "::notice::未配置 EDGEONE_API_TOKEN，跳过 EdgeOne 部署"
+          else
+            echo "ready=true" >> $GITHUB_OUTPUT
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.check.outputs.ready == 'true'
+
+      - uses: subosito/flutter-action@v2
+        if: steps.check.outputs.ready == 'true'
+        with:
+          channel: stable
+          flutter-version: 3.44.4
+          cache: true
+
+      - run: flutter pub get
+        if: steps.check.outputs.ready == 'true'
+
+      # EdgeOne 的构建环境没有 Flutter，所以在这里编译好，只把产物传过去。
+      # --no-web-resources-cdn：渲染引擎不从 www.gstatic.com 取（国内不通）
+      - run: flutter build web --release --base-href / --no-web-resources-cdn
+        if: steps.check.outputs.ready == 'true'
+
+      - uses: actions/setup-node@v4
+        if: steps.check.outputs.ready == 'true'
+        with:
+          node-version: '22'
+
+      - name: 上传到 EdgeOne Pages
+        if: steps.check.outputs.ready == 'true'
+        run: npx edgeone pages deploy build/web -n daily-diary -t "$EDGEONE_API_TOKEN"
+        env:
+          EDGEONE_API_TOKEN: ${{ secrets.EDGEONE_API_TOKEN }}

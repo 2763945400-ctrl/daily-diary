@@ -5,7 +5,7 @@
   body{font:16px/1.6 -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;
        margin:0;padding:16px;background:#fff;color:#222}
   h1{font-size:19px;margin:0 0 4px}
-  .sub{color:#888;font-size:13px;margin-bottom:16px}
+  .sub{color:#888;font-size:13px;margin-bottom:14px}
   .row{border:1px solid #e5e5e5;border-radius:10px;padding:12px;margin-bottom:8px}
   .name{font-weight:600}
   .size{color:#888;font-size:13px}
@@ -14,17 +14,20 @@
   #sum{margin-top:16px;padding:14px;border-radius:10px;background:#f4f4f4;
        font-size:15px;white-space:pre-wrap}
   b{font-size:17px}
+  button{width:100%;margin-top:12px;padding:14px;font-size:16px;border:0;
+         border-radius:10px;background:#3A5A40;color:#fff}
+  button:disabled{background:#bbb}
 </style>
 
 <h1>每日一记 · 连接诊断</h1>
-<div class="sub" id="t"></div>
+<div class="sub"><span id="host"></span> · <span id="t"></span></div>
 
 <div class="row"><div class="name">① 页面本身</div>
   <div class="size">约 3 KB</div>
   <div class="res ok">✅ 你能看到这行字，说明域名是通的</div></div>
 
 <div class="row" id="r0"><div class="name">② 小文件</div>
-  <div class="size">传输约 3 KB</div><div class="res run">测试中…</div></div>
+  <div class="size">传输约 3 KB</div><div class="res run">等待…</div></div>
 
 <div class="row" id="r1"><div class="name">③ 中文字体</div>
   <div class="size">传输约 1.3 MB</div><div class="res run">等待…</div></div>
@@ -35,67 +38,113 @@
 <div class="row" id="r3"><div class="name">⑤ 渲染引擎（最大）</div>
   <div class="size">传输约 2.1 MB</div><div class="res run">等待…</div></div>
 
-<div id="sum">测试进行中，请保持页面打开…</div>
+<div id="sum">准备开始…</div>
+<button id="go" disabled>再测一轮</button>
 
 <script>
-// 依次下载站点上真实的几个文件，逐级加大，看在哪一级断掉。
-// 每个都带时间戳绕过缓存，确保测的是真实网络。
+// 下载站点上真实的 4 个文件，记录成功与否和速度。
+// 关键：失败往往是随机的而不是按体积卡死，所以结论要分辨这两种模式，
+// 而且支持多测几轮——单轮结果不足以下判断。
 const tests = [
   ['r0', 'flutter_bootstrap.js',                        3],
   ['r1', 'assets/assets/fonts/NotoSansSC-subset.ttf', 1376],
   ['r2', 'main.dart.js',                              894],
   ['r3', 'canvaskit/chromium/canvaskit.wasm',        2134],
 ];
-const TIMEOUT = 40000;               // 单个文件最多等 40 秒
-const log = [];
-document.getElementById('t').textContent = new Date().toLocaleString('zh-CN');
+const TIMEOUT = 40000;
+const APP_KB = 3 + 1376 + 894 + 2134;   // 打开 App 要传的总量
+const history = [];                      // 累计每一轮的结果
+
+document.getElementById('host').textContent = location.hostname;
 
 async function one(id, url, kb) {
   const el = document.querySelector('#' + id + ' .res');
-  el.className = 'res run';
-  el.textContent = '下载中…';
+  el.className = 'res run'; el.textContent = '下载中…';
   const ctl = new AbortController();
   const timer = setTimeout(() => ctl.abort(), TIMEOUT);
   const t0 = performance.now();
   try {
     const res = await fetch(url + '?_=' + Date.now(), {signal: ctl.signal, cache: 'no-store'});
-    const buf = await res.arrayBuffer();
+    await res.arrayBuffer();
     clearTimeout(timer);
     const sec = (performance.now() - t0) / 1000;
-    const speed = Math.round(kb / sec);
+    const speed = kb / sec;
     el.className = 'res ok';
-    el.textContent = `✅ 成功 · ${sec.toFixed(1)} 秒 · 约 ${speed} KB/秒`;
-    log.push(`${kb}KB 成功 ${sec.toFixed(1)}s`);
-    return true;
+    el.textContent = `✅ 成功 · ${sec.toFixed(1)} 秒 · 约 ${Math.round(speed)} KB/秒`;
+    return {kb, ok: true, sec, speed};
   } catch (e) {
     clearTimeout(timer);
     const sec = (performance.now() - t0) / 1000;
-    const why = e.name === 'AbortError' ? `超时（等了 ${sec.toFixed(0)} 秒还没完）` : '连接失败';
     el.className = 'res bad';
-    el.textContent = '❌ ' + why;
-    log.push(`${kb}KB 失败(${why})`);
-    return false;
+    el.textContent = `❌ ${e.name === 'AbortError' ? '超时' : '连接失败'}（${sec.toFixed(0)} 秒）`;
+    return {kb, ok: false, sec};
   }
 }
 
-(async () => {
-  let lastOk = 0, firstFail = null;
-  for (const [id, url, kb] of tests) {
-    const ok = await one(id, url, kb);
-    if (ok) { lastOk = Math.max(lastOk, kb); }
-    else if (firstFail === null) { firstFail = kb; }
-  }
+function verdict() {
   const s = document.getElementById('sum');
-  if (firstFail === null) {
-    s.innerHTML = '<b>结论：全部通过 ✅</b>\n\n' +
-      '这个网络下 4.4 MB 全都能下完。App 打不开是别的原因，把这页截图发我。\n\n' + log.join('\n');
-  } else if (lastOk === 0) {
-    s.innerHTML = '<b>结论：域名能开，但一个文件都下不来 ❌</b>\n\n' +
-      '说明连接被掐得很死。换托管是唯一出路，重写成小体积没用。\n\n' + log.join('\n');
+  const all = history.flat();
+  const okList = all.filter(r => r.ok);
+  const failList = all.filter(r => !r.ok);
+  const rounds = history.length;
+
+  // 只看 >100KB 的大文件来判断模式，小文件测的是延迟不是带宽
+  const big = all.filter(r => r.kb > 100);
+  const bigOk = big.filter(r => r.ok), bigBad = big.filter(r => !r.ok);
+
+  let head, why;
+  if (failList.length === 0) {
+    head = '全部通过 ✅';
+    why = '这个网络下整套文件都能下完。';
+  } else if (okList.filter(r => r.kb > 100).length === 0) {
+    head = '域名能开，但大文件一个都下不来 ❌';
+    why = '连接被掐得很死。换托管是唯一出路，把体积做小没用。';
   } else {
-    s.innerHTML = `<b>结论：小的能下，大的下不来 ⚠️</b>\n\n` +
-      `能下完的最大约 ${lastOk} KB，从约 ${firstFail} KB 开始失败。\n` +
-      `说明是体积问题——做小体积的网页版会有效。\n\n` + log.join('\n');
+    // 有成功也有失败：看失败是不是按体积单调（真门槛），还是乱的（随机抖动）
+    const maxOk = Math.max(...bigOk.map(r => r.kb));
+    const minBad = Math.min(...bigBad.map(r => r.kb));
+    if (maxOk > minBad) {
+      head = '时好时坏，随机失败 ⚠️';
+      why = `有 ${maxOk} KB 下成功过，也有更小的 ${minBad} KB 失败过——不是体积门槛，是链路不稳。\n` +
+            `每传一个大文件都是一次赌博，App 要连赢 4 把才能打开。`;
+    } else {
+      head = '存在体积门槛 ⚠️';
+      why = `${maxOk} KB 以内能下完，${minBad} KB 以上下不来。`;
+    }
   }
-})();
+
+  // 用观测到的速度估算打开 App 要多久
+  let est = '';
+  if (okList.length) {
+    const sp = okList.filter(r => r.kb > 100).map(r => r.speed);
+    if (sp.length) {
+      const lo = Math.min(...sp), hi = Math.max(...sp);
+      const f = v => v > 60 ? (v / 60).toFixed(1) + ' 分钟' : v.toFixed(0) + ' 秒';
+      est = `\n\n按实测速度（${Math.round(lo)}–${Math.round(hi)} KB/秒）估算：\n` +
+            `· 现在的版本（4.4 MB）要 ${f(APP_KB / hi)} ～ ${f(APP_KB / lo)}\n` +
+            `· 若做成 100 KB 的网页版，要 ${f(100 / hi)} ～ ${f(100 / lo)}`;
+    }
+  }
+
+  const detail = history.map((r, i) =>
+    `第${i + 1}轮  ` + r.map(x => `${x.kb}KB${x.ok ? '✓' + x.sec.toFixed(1) + 's' : '✗'}`).join('  ')
+  ).join('\n');
+
+  s.innerHTML = `<b>结论：${head}</b>\n（已测 ${rounds} 轮，成功 ${okList.length}/${all.length}）\n\n${why}${est}\n\n${detail}`;
+}
+
+async function run() {
+  const btn = document.getElementById('go');
+  btn.disabled = true;
+  document.getElementById('t').textContent = new Date().toLocaleTimeString('zh-CN');
+  document.getElementById('sum').textContent = '测试进行中，请保持页面打开…';
+  const round = [];
+  for (const [id, url, kb] of tests) round.push(await one(id, url, kb));
+  history.push(round);
+  verdict();
+  btn.disabled = false;
+  btn.textContent = `再测一轮（失败是随机的，建议测 3 轮）`;
+}
+run();
+document.getElementById('go').onclick = run;
 </script>
