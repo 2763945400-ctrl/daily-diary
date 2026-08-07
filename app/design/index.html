@@ -1,0 +1,144 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>每日一记 · 样式规范对照页</title>
+<link rel="stylesheet" href="tokens.css">
+<style>
+  body{font-family:var(--font);color:var(--c-text);background:var(--c-bg);
+       margin:0;padding:var(--s-4);line-height:var(--lh-normal)}
+  .wrap{max-width:520px;margin:0 auto}
+  h1{font-size:var(--t-title);margin:0 0 var(--s-1)}
+  .sub{color:var(--c-text-weak);font-size:var(--t-caption);margin-bottom:var(--s-8)}
+  h2{font-size:var(--t-label);color:var(--c-text-weak);text-transform:uppercase;
+     letter-spacing:.08em;margin:var(--s-8) 0 var(--s-3);
+     border-bottom:1px solid var(--c-border);padding-bottom:var(--s-2)}
+  .note{font-size:var(--t-caption);color:var(--c-text-weak);margin:var(--s-2) 0 0}
+
+  /* 色卡 */
+  .sw{display:flex;align-items:center;gap:var(--s-3);padding:var(--s-2) 0}
+  .chip{width:52px;height:52px;border-radius:var(--r-md);
+        border:1px solid var(--c-border);flex:none}
+  .sw code{font-size:var(--t-caption);color:var(--c-text-weak)}
+  .pass{color:var(--c-primary);font-size:var(--t-caption);font-weight:600}
+  .fail{color:var(--c-danger);font-size:var(--t-caption);font-weight:600}
+
+  /* 组件样例 */
+  .btn{border:0;font-family:var(--font);font-size:var(--t-label);
+       padding:var(--s-3) var(--s-6);border-radius:var(--r-pill);
+       min-height:44px;transition:opacity var(--d-fast) var(--ease)}
+  .btn-primary{background:var(--c-primary);color:var(--c-on-primary)}
+  .btn-secondary{background:var(--c-surface);color:var(--c-text)}
+  .btn-danger{background:none;color:var(--c-danger)}
+  .card{background:var(--c-surface);border-radius:var(--r-lg);padding:var(--s-4)}
+  .input{background:var(--c-surface);border:0;border-radius:var(--r-md);
+         padding:var(--s-4);font-size:var(--t-body);font-family:var(--font);
+         width:100%;box-sizing:border-box;line-height:var(--lh-normal)}
+  .input::placeholder{color:var(--c-hint)}
+  .toast{background:var(--c-text);color:var(--c-bg);border-radius:var(--r-pill);
+         padding:var(--s-3) var(--s-4);font-size:var(--t-label);display:inline-block}
+  .empty{text-align:center;color:var(--c-text-weak);padding:var(--s-12) 0}
+
+  .row{display:flex;gap:var(--s-2);flex-wrap:wrap;align-items:center}
+  .bar{background:var(--c-primary);height:16px;border-radius:var(--r-xs)}
+  .spec{display:flex;align-items:center;gap:var(--s-3);margin-bottom:var(--s-2)}
+  .spec code{font-size:var(--t-caption);color:var(--c-text-weak);
+             min-width:64px;flex:none}
+  .dark{background:var(--c-dark-bg);border-radius:var(--r-lg);
+        padding:var(--s-6);text-align:center}
+  .dark .p{color:var(--c-dark-text);font-size:var(--t-body)}
+  .dark .s{color:var(--c-dark-weak);font-size:var(--t-caption)}
+  .ring{width:96px;height:96px;border-radius:var(--r-pill);margin:var(--s-4) auto;
+        border:2px solid var(--c-dark-weak);
+        animation:breath var(--d-breath) ease-in-out infinite}
+  @keyframes breath{0%,100%{transform:scale(.72)}50%{transform:scale(1)}}
+</style>
+
+<div class="wrap">
+  <h1>每日一记 · 样式规范</h1>
+  <div class="sub">这一页的所有样式都来自 tokens.css。改变量，这页跟着变。</div>
+
+  <h2>颜色</h2>
+  <div class="sw"><div class="chip" style="background:var(--c-primary)"></div>
+    <div><b>主色</b> <code>--c-primary #3A5A40</code><br>
+    <span class="pass">白底对比 7.7:1 · 达 AAA</span></div></div>
+  <div class="sw"><div class="chip" style="background:var(--c-surface)"></div>
+    <div><b>卡片底</b> <code>--c-surface #F6F6F4</code><br>
+    <span class="note">沿用现版本 cardFill</span></div></div>
+  <div class="sw"><div class="chip" style="background:var(--c-text)"></div>
+    <div><b>正文</b> <code>--c-text #1A1C1A</code><br>
+    <span class="pass">对比 16.1:1 ✓</span></div></div>
+  <div class="sw"><div class="chip" style="background:var(--c-text-weak)"></div>
+    <div><b>次要文字</b> <code>--c-text-weak #5F6B60</code><br>
+    <span class="pass">对比 5.9:1 · 达 AA</span></div></div>
+  <div class="sw"><div class="chip" style="background:var(--c-hint)"></div>
+    <div><b>占位符</b> <code>--c-hint #B8B8B2</code><br>
+    <span class="note">对比 2.3:1 —— 只用于占位，禁止显示真实信息</span></div></div>
+  <div class="sw"><div class="chip" style="background:var(--c-danger)"></div>
+    <div><b>危险</b> <code>--c-danger #B3261E</code><br>
+    <span class="pass">对比 6.6:1 · 达 AA</span></div></div>
+  <div class="sw"><div class="chip" style="background:#F44336"></div>
+    <div><b>现版本用的红</b> <code>Colors.red #F44336</code><br>
+    <span class="fail">对比 3.7:1 · 不达 AA —— 本次替换掉</span></div></div>
+
+  <h2>字号 · 只有 4 级</h2>
+  <div style="font-size:var(--t-title);line-height:var(--lh-tight)">标题 20px　连续 12 天</div>
+  <div style="font-size:var(--t-body)">正文 16px　今天天气很好，走了很久的路。</div>
+  <div style="font-size:var(--t-label)">按钮/标签 14px</div>
+  <div style="font-size:var(--t-caption);color:var(--c-text-weak)">辅助 13px　2026年8月1日 周五</div>
+
+  <h2>间距 · 7 档</h2>
+  <div class="spec"><code>--s-1</code><div class="bar" style="width:4px"></div>4</div>
+  <div class="spec"><code>--s-2</code><div class="bar" style="width:8px"></div>8</div>
+  <div class="spec"><code>--s-3</code><div class="bar" style="width:12px"></div>12</div>
+  <div class="spec"><code>--s-4</code><div class="bar" style="width:16px"></div>16　最常用</div>
+  <div class="spec"><code>--s-6</code><div class="bar" style="width:24px"></div>24</div>
+  <div class="spec"><code>--s-8</code><div class="bar" style="width:32px"></div>32</div>
+  <div class="spec"><code>--s-12</code><div class="bar" style="width:48px"></div>48</div>
+  <p class="note">现版本混用 4/8/14/16/48，其中 14 是异类，本次归并到 16。</p>
+
+  <h2>圆角 · 收敛成 3 个 + 胶囊</h2>
+  <div class="row">
+    <div style="width:60px;height:44px;background:var(--c-surface);border-radius:var(--r-xs)"></div>
+    <div style="width:60px;height:44px;background:var(--c-surface);border-radius:var(--r-md)"></div>
+    <div style="width:60px;height:44px;background:var(--c-surface);border-radius:var(--r-lg)"></div>
+    <div style="width:60px;height:44px;background:var(--c-surface);border-radius:var(--r-pill)"></div>
+  </div>
+  <p class="note">2 细条　12 输入区/小卡片　16 大卡片　999 胶囊按钮<br>
+     现版本的 14 归并到 12。</p>
+
+  <h2>按钮 · 一屏只能有一个主色按钮</h2>
+  <div class="row">
+    <button class="btn btn-primary">记下今天</button>
+    <button class="btn btn-secondary">并入今天</button>
+    <button class="btn btn-danger">清空全部</button>
+  </div>
+  <p class="note">最小点击区 44×44px（iOS 触控标准）</p>
+
+  <h2>输入区</h2>
+  <textarea class="input" rows="3" placeholder="今天过得怎么样？"></textarea>
+  <p class="note">占位符用 --c-hint。定案（34）：记录框保持初始高度，内容超出向下延展。</p>
+
+  <h2>卡片 · 回顾页条目</h2>
+  <div class="card">
+    <div style="font-size:var(--t-caption);color:var(--c-text-weak)">2026年7月31日 周四</div>
+    <div style="margin-top:var(--s-2)">深夜把网页版打不开的问题查清楚了，是链路波动不是被墙。</div>
+  </div>
+
+  <h2>提示 · toast</h2>
+  <div class="toast">已并入今天</div>
+  <p class="note">提示用 toast；需要用户做选择时才用对话框。</p>
+
+  <h2>空状态</h2>
+  <div class="empty">还没有记录，去「今天」写下第一条吧</div>
+
+  <h2>静坐页 · 深色沉浸</h2>
+  <div class="dark">
+    <div class="ring"></div>
+    <div class="p">还剩 8 分钟</div>
+    <div class="s">轻触任意处结束</div>
+  </div>
+  <p class="note">呼吸圆环周期 14 秒（涨 7 + 缩 7）。这里用 scale 关键帧，
+     不叠 alternate，避免周期翻倍。</p>
+
+  <div style="height:var(--s-12)"></div>
+</div>

@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>每日一记 · 现版本 UI 还原稿（v1.4.0）</title>
+<!--
+  本文件是「每日一记」Flutter App 现版本 UI 的静态还原稿，供导入 Figma（html.to.design）做重设计底稿。
+  - 一切样式数值以 lib/ 下 Flutter 源码为准（非 tokens.css 的新规范）。
+  - 静态展示，无交互无 JS。示例内容为虚构。
+  - 主色由 ColorScheme.fromSeed(#3A5A40) 按 Material 3 tonalSpot 规则精确计算。
+-->
+<style>
+  /* ===== 色板：Material 3 tonalSpot, seed #3A5A40（main.dart:33） ===== */
+  :root {
+    --primary:            #326941;  /* scheme.primary */
+    --on-primary:         #FFFFFF;
+    --sec-container:      #D3E8D2;  /* secondaryContainer：tonal 按钮、导航选中胶囊 */
+    --on-sec-container:   #0E1F12;
+    --on-surface:         #181D18;  /* 正文默认色 */
+    --on-surface-variant: #414941;  /* 图标、副标题 */
+    --outline:            #717970;  /* scheme.outline：次要文字 */
+    --outline-variant:    #C1C9BE;  /* 分割线 */
+    --card:               #F6F6F4;  /* cardFill（style.dart:4） */
+    --hint:               #B8B8B2;  /* hintColor（style.dart:5） */
+    --nav-bg:             #EBEFE7;  /* surfaceContainer：NavigationBar 底色 */
+    --danger:             #F44336;  /* Colors.red（settings_page.dart:249-250） */
+    --black87:            rgba(0,0,0,.87);
+    --dark-bg:            #0E100D;  /* 静坐页底色（meditate_page.dart:138） */
+    --dark-dim:           rgba(255,255,255,.40); /* 0x66FFFFFF */
+    --dark-dimmer:        rgba(255,255,255,.25); /* 0x40FFFFFF */
+    --font: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: var(--font);
+    background: #DFDFDC;
+    color: #333;
+    padding: 48px 32px 64px;
+  }
+
+  .doc-head { max-width: 1400px; margin: 0 auto 32px; }
+  .doc-head h1 { font-size: 22px; font-weight: 700; }
+  .doc-head p { font-size: 13px; color: #777; margin-top: 6px; line-height: 1.7; }
+
+  .frames { display: flex; flex-wrap: wrap; gap: 48px; justify-content: center; max-width: 1400px; margin: 0 auto; }
+  .frame-cap { margin-bottom: 12px; }
+  .frame-cap .name { font-size: 16px; font-weight: 700; color: #222; }
+  .frame-cap .src  { font-size: 12px; color: #888; margin-top: 3px; }
+  .frame-cap .fict { font-size: 11px; color: #B0B0AA; margin-top: 3px; }
+
+  /* ===== 手机框：内屏 390×844 ===== */
+  .bezel { background: #111; padding: 10px; border-radius: 50px; box-shadow: 0 18px 40px rgba(0,0,0,.25); }
+  .phone {
+    width: 390px; height: 844px; border-radius: 40px; overflow: hidden;
+    background: #fff; position: relative;
+    display: flex; flex-direction: column;
+    font-family: var(--font);
+  }
+  .phone.dark { background: var(--dark-bg); }
+
+  /* 状态栏（推断：Flutter SafeArea，iOS 样式） */
+  .statusbar {
+    height: 47px; flex: none; display: flex; align-items: center; justify-content: space-between;
+    padding: 0 28px 0 32px; color: #000;
+  }
+  .phone.dark .statusbar { color: #fff; }
+  .statusbar .time { font-size: 15px; font-weight: 600; letter-spacing: .2px; }
+  .statusbar .ics { display: flex; align-items: center; gap: 6px; }
+
+  .body { flex: 1; position: relative; overflow: hidden; }
+
+  /* ===== 底部导航（main.dart:87-107，M3 NavigationBar 高 80） ===== */
+  .navbar { height: 80px; flex: none; background: var(--nav-bg); display: flex; padding-top: 12px; }
+  .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; }
+  .nav-ico { width: 64px; height: 32px; border-radius: 16px; display: flex; align-items: center; justify-content: center; }
+  .nav-item.active .nav-ico { background: var(--sec-container); }
+  .nav-ico svg { width: 24px; height: 24px; fill: var(--on-surface-variant); }
+  .nav-item.active .nav-ico svg { fill: var(--on-sec-container); }
+  .nav-label { margin-top: 4px; font-size: 12px; line-height: 16px; font-weight: 500; color: var(--on-surface-variant); }
+  .nav-item.active .nav-label { color: var(--on-surface); }
+
+  /* Home 指示条（推断：iOS） */
+  .home { height: 34px; flex: none; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 9px; background: var(--nav-bg); }
+  .home .bar { width: 134px; height: 5px; border-radius: 2.5px; background: #000; }
+  .home.on-dark { background: var(--dark-bg); }
+  .home.on-dark .bar { background: rgba(255,255,255,.4); }
+
+  svg.ic { fill: currentColor; display: block; }
+
+  /* ================= 今天页 ================= */
+  .page { padding: 32px 24px 24px; }
+  .page-today { padding-bottom: 96px; }
+
+  .today-head { display: flex; align-items: center; justify-content: space-between; }
+  .page-title { font-size: 28px; line-height: 36px; font-weight: 700; color: var(--on-surface); } /* headlineMedium + w700 */
+
+  .chip-pending {
+    display: flex; align-items: center; gap: 4px;
+    background: var(--card); border-radius: 12px; padding: 6px 10px;
+    color: var(--outline); font-size: 12px; line-height: 16px;
+  }
+  .streak { margin-top: 4px; font-size: 14px; line-height: 20px; color: var(--outline); }
+
+  .write-card { margin-top: 24px; background: var(--card); border-radius: 16px; padding: 16px; }
+  .field-area { min-height: 120px; font-size: 16px; line-height: 24px; color: var(--hint); } /* minLines:5, bodyLarge */
+  .add-photo { display: flex; align-items: center; gap: 8px; padding: 4px 0; margin-top: 12px; color: var(--outline); font-size: 14px; line-height: 20px; }
+
+  .med-entry {
+    margin-top: 16px; background: var(--card); border-radius: 16px;
+    padding: 14px 16px; display: flex; align-items: center; gap: 12px;
+  }
+  .med-entry .t1 { font-size: 14px; line-height: 20px; font-weight: 600; color: var(--on-surface); }
+  .med-entry .t2 { font-size: 12px; line-height: 16px; color: var(--outline); margin-top: 1px; }
+  .med-entry .grow { flex: 1; }
+
+  .btn-save {
+    margin-top: 24px; height: 56px; border-radius: 16px;
+    background: var(--primary); color: var(--on-primary);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; line-height: 24px;
+  }
+
+  .fab {
+    position: absolute; right: 20px; bottom: 20px; width: 56px; height: 56px;
+    border-radius: 50%; background: var(--primary);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 6px 10px rgba(0,0,0,.14), 0 1px 18px rgba(0,0,0,.10);
+  }
+
+  /* ================= 回顾页 ================= */
+  .cal-card { background: var(--card); border-radius: 16px; padding: 16px; }
+  .cal-head { display: flex; align-items: center; justify-content: space-between; height: 48px; }
+  .cal-head .month { font-size: 16px; line-height: 24px; font-weight: 700; color: var(--on-surface); }
+  .cal-nav { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; color: var(--on-surface-variant); }
+  .cal-week { display: flex; margin-top: 8px; }
+  .cal-week span { flex: 1; text-align: center; font-size: 12px; line-height: 16px; color: var(--hint); }
+  .cal-grid { display: flex; flex-wrap: wrap; margin-top: 4px; }
+  .cal-cell { width: 14.2857%; height: 44.28px; aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .cal-day { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; line-height: 20px; color: var(--black87); }
+  .cal-day.today { background: var(--primary); color: var(--on-primary); font-weight: 700; }
+  .cal-dot { width: 5px; height: 5px; border-radius: 50%; margin-top: 2px; background: transparent; }
+  .cal-dot.has { background: var(--primary); }
+
+  .tl-card { margin-top: 12px; background: var(--card); border-radius: 16px; padding: 14px; display: flex; gap: 12px; }
+  .tl-card.first { margin-top: 24px; }
+  .tl-main { flex: 1; min-width: 0; }
+  .tl-date { font-size: 12px; line-height: 16px; font-weight: 600; color: var(--outline); }
+  .tl-text {
+    margin-top: 6px; font-size: 14px; line-height: 21px; color: var(--on-surface);
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .photo-ph {
+    flex: none; background: #DDDEDA; border-radius: 12px; color: #9B9B95;
+    display: flex; align-items: center; justify-content: center; text-align: center;
+    font-size: 10px; line-height: 1.4;
+  }
+
+  /* ================= 设置页 ================= */
+  .sec-label { font-size: 13px; line-height: 18px; color: var(--hint); padding-left: 4px; margin: 24px 0 8px; }
+  .sec-label.first { margin-top: 0; }
+  .s-card { background: var(--card); border-radius: 16px; overflow: hidden; }
+  .tile { display: flex; align-items: center; padding: 0 16px; min-height: 56px; }
+  .tile.two { min-height: 72px; padding: 8px 16px; }
+  .tile .lead { width: 40px; flex: none; color: var(--on-surface-variant); }
+  .tile .tt { flex: 1; min-width: 0; }
+  .tile .title { font-size: 16px; line-height: 24px; color: var(--on-surface); }
+  .tile .title.red { color: var(--danger); }
+  .tile .sub { font-size: 12px; line-height: 16px; color: var(--on-surface-variant); margin-top: 2px; }
+  .tile .time { font-size: 16px; line-height: 24px; color: var(--on-surface); }
+  .divider { height: 1px; background: var(--outline-variant); margin-left: 56px; }
+  .switch { width: 52px; height: 32px; border-radius: 16px; background: var(--primary); position: relative; flex: none; }
+  .switch::after { content: ""; position: absolute; top: 4px; right: 4px; width: 24px; height: 24px; border-radius: 50%; background: #fff; }
+  .privacy { padding: 16px; font-size: 13px; line-height: 1.7; color: var(--outline); }
+
+  /* ================= 静坐页 ================= */
+  .med-close { position: absolute; top: 4px; left: 4px; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; color: var(--dark-dim); }
+  .breath-wrap { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+  .breath { position: relative; width: 220px; height: 220px; }
+  .breath .ring {
+    position: absolute; inset: 0; border-radius: 50%;
+    background: radial-gradient(circle, rgba(143,184,156,.45) 0%, rgba(143,184,156,.15) 65%, rgba(143,184,156,0) 100%);
+    border: 1px solid rgba(143,184,156,.25);
+    transform: scale(.91); opacity: .875; /* 冻结在呼吸中段（动画 0.82~1.0 / 0.75~1.0） */
+  }
+  .breath .label { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 17px; line-height: 24px; color: var(--dark-dim); }
+  .med-bottom { position: absolute; left: 0; right: 0; bottom: 24px; display: flex; flex-direction: column; align-items: center; }
+  .med-opts { display: flex; }
+  .med-opts span { padding: 10px 16px; font-size: 15px; line-height: 22px; color: var(--dark-dimmer); }
+  .med-opts span.sel { color: #fff; font-weight: 600; }
+  .med-abort { margin-top: 8px; font-size: 14px; line-height: 20px; font-weight: 500; color: var(--dark-dimmer); padding: 10px 12px; }
+
+  /* ================= 随手记浮层 ================= */
+  .scrim { position: absolute; inset: 0; background: rgba(0,0,0,.32); z-index: 5; }
+  .sheet {
+    position: absolute; left: 0; right: 0; z-index: 6;
+    background: #fff; border-radius: 20px 20px 0 0; padding: 12px 24px 24px;
+  }
+  .sheet-handle { width: 36px; height: 4px; border-radius: 2px; background: var(--hint); margin: 0 auto; }
+  .sheet-field { margin-top: 16px; background: var(--card); border-radius: 12px; padding: 16px; min-height: 104px; font-size: 16px; line-height: 24px; color: var(--hint); }
+  .sheet-actions { margin-top: 12px; display: flex; justify-content: flex-end; }
+  .btn-tonal {
+    height: 40px; padding: 0 24px; border-radius: 14px;
+    background: var(--sec-container); color: var(--on-sec-container);
+    display: flex; align-items: center; font-size: 14px; line-height: 20px; font-weight: 500;
+  }
+  .keyboard {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 291px; z-index: 7;
+    background: #D2D5DB; display: flex; align-items: center; justify-content: center;
+    color: #8A8F98; font-size: 12px; letter-spacing: 1px;
+  }
+
+  /* ===== 底部说明 ===== */
+  .legend { max-width: 1400px; margin: 56px auto 0; background: #fff; border-radius: 16px; padding: 28px 32px; }
+  .legend h2 { font-size: 16px; margin-bottom: 14px; }
+  .legend .swatches { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 24px; }
+  .sw { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #555; }
+  .sw i { width: 28px; height: 28px; border-radius: 8px; display: block; border: 1px solid rgba(0,0,0,.08); }
+  .legend ul { font-size: 13px; color: #555; line-height: 2; padding-left: 20px; }
+  .legend code { background: #F0F0EE; border-radius: 4px; padding: 1px 5px; font-size: 12px; }
+</style>
+</head>
+<body>
+
+<div class="doc-head">
+  <h1>每日一记 · 现版本 UI 还原稿（v1.4.0）</h1>
+  <p>静态还原 Flutter 源码（lib/）当前真实样貌，作为 Figma 重设计底稿。样式数值全部以源码为准；圆角混用 2/12/14/16、删除红 #F44336 等均按原样保留，未做"修正"。所有示例内容为虚构。</p>
+</div>
+
+<div class="frames">
+
+  <!-- ═══════════ ① 今天 ═══════════ -->
+  <div>
+    <div class="frame-cap">
+      <div class="name">① 今天</div>
+      <div class="src">lib/pages/today_page.dart · lib/main.dart（底部导航）</div>
+      <div class="fict">日期、连续天数、待整理数量为虚构示例</div>
+    </div>
+    <div class="bezel"><div class="phone">
+      <div class="statusbar">
+        <span class="time">9:41</span>
+        <span class="ics">
+          <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="0.8"/><rect x="4.5" y="5" width="3" height="6" rx="0.8"/><rect x="9" y="2.5" width="3" height="8.5" rx="0.8"/><rect x="13.5" y="0" width="3" height="11" rx="0.8"/></svg>
+          <svg width="16" height="11" viewBox="0 0 16 12" fill="currentColor"><circle cx="8" cy="10.2" r="1.4"/><path d="M8 6.5c1.9 0 3.6.8 4.8 2L11.4 9.9A4.8 4.8 0 0 0 8 8.5c-1.3 0-2.5.5-3.4 1.4L3.2 8.5A6.8 6.8 0 0 1 8 6.5z"/><path d="M8 2c3 0 5.8 1.2 7.8 3.2l-1.4 1.4A9 9 0 0 0 8 4C5.5 4 3.2 5 1.6 6.6L.2 5.2A11 11 0 0 1 8 2z"/></svg>
+          <svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x="0.5" y="0.5" width="21" height="11" rx="3.5" stroke="currentColor" opacity=".4"/><rect x="2" y="2" width="17" height="8" rx="2" fill="currentColor"/><path d="M23 4v4c1-.3 1.5-1 1.5-2s-.5-1.7-1.5-2z" fill="currentColor" opacity=".4"/></svg>
+        </span>
+      </div>
+
+      <div class="body"><div class="page page-today">
+        <div class="today-head">
+          <div class="page-title">8月5日 周三</div>
+          <div class="chip-pending">
+            <svg class="ic" width="16" height="16" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5v-3h3.56c.69 1.19 1.97 2 3.45 2s2.75-.81 3.45-2H19v3zm0-5h-4.99c0 1.1-.9 2-2 2s-2-.9-2-2H5V5h14v9z"/></svg>
+            <span>待整理 2</span>
+            <svg class="ic" width="16" height="16" viewBox="0 0 24 24"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6-6-6z"/></svg>
+          </div>
+        </div>
+        <div class="streak">已连续记录 12 天</div>
+
+        <div class="write-card">
+          <div class="field-area">今天过得怎么样？</div>
+          <div class="add-photo">
+            <svg class="ic" width="20" height="20" viewBox="0 0 24 24"><path d="M18 20H4V6h9V4H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-9h-2v9zm-7.79-3.17-1.96-2.36L5.5 18h11l-3.54-4.71zM20 4V1h-2v3h-3c.01.01 0 2 0 2h3v2.99c.01.01 2 0 2 0V6h3V4h-3z"/></svg>
+            <span>添加照片</span>
+          </div>
+        </div>
+
+        <div class="med-entry">
+          <svg class="ic" width="24" height="24" viewBox="0 0 24 24" style="color:var(--outline)"><path d="M21 16v-2c-2.24 0-4.16-.96-5.6-2.68l-1.34-1.6A1.98 1.98 0 0 0 12.53 9h-1.05c-.59 0-1.15.26-1.53.72l-1.34 1.6C7.16 13.04 5.24 14 3 14v2c2.77 0 5.19-1.17 7-3.25V15l-3.88 1.55c-.67.27-1.12.93-1.12 1.66C5 19.2 5.8 20 6.79 20H9v-.5a2.5 2.5 0 0 1 2.5-2.5h3c.28 0 .5.22.5.5s-.22.5-.5.5h-3c-.83 0-1.5.67-1.5 1.5v.5h7.21c.99 0 1.79-.8 1.79-1.79 0-.73-.45-1.39-1.12-1.66L14 15v-2.25c1.81 2.08 4.23 3.25 7 3.25z"/></svg>
+          <div class="grow">
+            <div class="t1">先静坐片刻</div>
+            <div class="t2">清空思绪，再写今天</div>
+          </div>
+          <svg class="ic" width="24" height="24" viewBox="0 0 24 24" style="color:var(--outline)"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6-6-6z"/></svg>
+        </div>
+
+        <div class="btn-save">记下今天</div>
+      </div>
+
+      <div class="fab">
+        <svg class="ic" width="24" height="24" viewBox="0 0 24 24" style="color:#fff"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+      </div>
+      </div>
+
+      <div class="navbar">
+        <div class="nav-item active">
+          <div class="nav-ico"><svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a.996.996 0 0 0 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></div>
+          <div class="nav-label">今天</div>
+        </div>
+        <div class="nav-item">
+          <div class="nav-ico"><svg viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2zM9 14H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2zm-8 4H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2z"/></svg></div>
+          <div class="nav-label">回顾</div>
+        </div>
+        <div class="nav-item">
+          <div class="nav-ico"><svg viewBox="0 0 24 24"><path d="M19.43 12.98c.04-.32.07-.64.07-.98 0-.34-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46a.5.5 0 0 0-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65A.488.488 0 0 0 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1a.566.566 0 0 0-.18-.03c-.17 0-.34.09-.43.25l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98 0 .33.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.37.29.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.06.02.12.03.18.03.17 0 .34-.09.43-.25l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zm-1.98-1.71c.04.31.05.52.05.73 0 .21-.02.43-.05.73l-.14 1.13.89.7 1.08.84-.7 1.21-1.27-.51-1.04-.42-.9.68c-.43.32-.84.56-1.25.73l-1.06.43-.16 1.13-.2 1.35h-1.4l-.19-1.35-.16-1.13-1.06-.43c-.43-.18-.83-.41-1.23-.71l-.91-.7-1.06.43-1.27.51-.7-1.21 1.08-.84.89-.7-.14-1.13c-.03-.31-.05-.54-.05-.74s.02-.43.05-.73l.14-1.13-.89-.7-1.08-.84.7-1.21 1.27.51 1.04.42.9-.68c.43-.32.84-.56 1.25-.73l1.06-.43.16 1.13.2 1.35h1.39l.19 1.35.16 1.13 1.06.43c.43.18.83.41 1.23.71l.91.7 1.06-.43 1.27-.51.7 1.21-1.07.85-.89.7.14 1.13zM12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 6c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/></svg></div>
+          <div class="nav-label">设置</div>
+        </div>
+      </div>
+      <div class="home"><div class="bar"></div></div>
+    </div></div>
+  </div>
+
+  <!-- ═══════════ ② 回顾 ═══════════ -->
+  <div>
+    <div class="frame-cap">
+      <div class="name">② 回顾</div>
+      <div class="src">lib/pages/review_page.dart</div>
+      <div class="fict">日历标记与三条日记为虚构示例</div>
+    </div>
+    <div class="bezel"><div class="phone">
+      <div class="statusbar">
+        <span class="time">9:41</span>
+        <span class="ics">
+          <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="0.8"/><rect x="4.5" y="5" width="3" height="6" rx="0.8"/><rect x="9" y="2.5" width="3" height="8.5" rx="0.8"/><rect x="13.5" y="0" width="3" height="11" rx="0.8"/></svg>
+          <svg width="16" height="11" viewBox="0 0 16 12" fill="currentColor"><circle cx="8" cy="10.2" r="1.4"/><path d="M8 6.5c1.9 0 3.6.8 4.8 2L11.4 9.9A4.8 4.8 0 0 0 8 8.5c-1.3 0-2.5.5-3.4 1.4L3.2 8.5A6.8 6.8 0 0 1 8 6.5z"/><path d="M8 2c3 0 5.8 1.2 7.8 3.2l-1.4 1.4A9 9 0 0 0 8 4C5.5 4 3.2 5 1.6 6.6L.2 5.2A11 11 0 0 1 8 2z"/></svg>
+          <svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x="0.5" y="0.5" width="21" height="11" rx="3.5" stroke="currentColor" opacity=".4"/><rect x="2" y="2" width="17" height="8" rx="2" fill="currentColor"/><path d="M23 4v4c1-.3 1.5-1 1.5-2s-.5-1.7-1.5-2z" fill="currentColor" opacity=".4"/></svg>
+        </span>
+      </div>
+
+      <div class="body"><div class="page">
+        <div class="cal-card">
+          <div class="cal-head">
+            <div class="cal-nav"><svg class="ic" width="24" height="24" viewBox="0 0 24 24"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12l4.58-4.59z"/></svg></div>
+            <div class="month">2026年8月</div>
+            <div class="cal-nav"><svg class="ic" width="24" height="24" viewBox="0 0 24 24"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6-6-6z"/></svg></div>
+          </div>
+          <div class="cal-week"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span></div>
+          <div class="cal-grid">
+            <!-- 2026-08-01 是周六，前 5 格空白 -->
+            <div class="cal-cell"></div><div class="cal-cell"></div><div class="cal-cell"></div><div class="cal-cell"></div><div class="cal-cell"></div>
+            <div class="cal-cell"><div class="cal-day">1</div><div class="cal-dot has"></div></div>
+            <div class="cal-cell"><div class="cal-day">2</div><div class="cal-dot has"></div></div>
+            <div class="cal-cell"><div class="cal-day">3</div><div class="cal-dot has"></div></div>
+            <div class="cal-cell"><div class="cal-day">4</div><div class="cal-dot has"></div></div>
+            <div class="cal-cell"><div class="cal-day today">5</div><div class="cal-dot"></div></div>
+            <div class="cal-cell"><div class="cal-day">6</div><div class="cal-dot"></div></div>
+            <div class="cal-cell"><div class="cal-day">7</div><div class="cal-dot"></div></div>
+            <div class="cal-cell"><div class="cal-day">8</div><div class="cal-dot"></div></div>
+            <div class="cal-cell"><div class="cal-day">9</div><div class="cal-dot"></div></div>
+            <div class="cal-cell"><div class="cal-day">10</div><div class="cal-dot"></div></div>
+            <div class="cal-cell"><div class="cal-day">11</div><div class="cal-dot"></div></div>
+            <div class="cal-cell"><div class="cal-day">12</div><div class="cal-dot"></div></div>
+            <div class="cal-cell"><div class="cal-day">13</div><div class="cal-dot"></div></div>
+            <div class="cal-cell"><div class="cal-day">14</div><div class="cal-dot"></div></div>
+            <div class="cal-cell"><div class="cal-day">15</div><div class="cal-dot"></div></div>
+            <div class="cal-cell"><div class="cal-day">16</div><div class="cal-dot"></div></div>
+            <div class="cal-cell"><div class="cal-day">17</div><div class="cal-dot"></div></div>
+            <div class="cal-cell"><div class="cal-day">18</div><div class="cal-dot"></div></div>
+            <div class="cal-cell"><div class="cal-day">19</div><div class="cal-dot"></div></div>
+            <div class="cal-cell"><div class="cal-day">20</div><div class="cal-dot"></div></div>
+            <div class="cal-cell"><div class="cal-day">21</div><div class="cal-dot"></div></div>
+            <div class="cal-cell"><div class="cal-day">22</div><div class="cal-dot"></div></div>
+            <div class="cal-cell"><div class="cal-day">23</div><div class="cal-dot"></div></div>
+            <div class="cal-cell"><div class="cal-day">24</div><div class="cal-dot"></div></div>
+            <div class="cal-cell"><div class="cal-day">25</div><div class="cal-dot"></div></div>
+            <div class="cal-cell"><div class="cal-day">26</div><div class="cal-dot"></div></div>
+            <div class="cal-cell"><div class="cal-day">27</div><div class="cal-dot"></div></div>
+            <div class="cal-cell"><div class="cal-day">28</div><div class="cal-dot"></div></div>
+            <div class="cal-cell"><div class="cal-day">29</div><div class="cal-dot"></div></div>
+            <div class="cal-cell"><div class="cal-day">30</div><div class="cal-dot"></div></div>
+            <div class="cal-cell"><div class="cal-day">31</div><div class="cal-dot"></div></div>
+          </div>
+        </div>
+
+        <div class="tl-card first">
+          <div class="tl-main">
+            <div class="tl-date">8月4日 周二</div>
+            <div class="tl-text">今天把拖了两周的方案初稿写完了，意外地顺利。傍晚去河边走了四十分钟，风很舒服，看了很久晚霞。晚上和妈妈视频，她说楼下的桂花开了，让我国庆一定回家。</div>
+          </div>
+          <div class="photo-ph" style="width:72px;height:72px">照片占位<br>72×72</div>
+        </div>
+        <div class="tl-card">
+          <div class="tl-main">
+            <div class="tl-date">8月3日 周一</div>
+            <div class="tl-text">开了一整天的会，脑子嗡嗡的。午休时在楼下走了两圈，买了杯冰美式，算是把自己救回来了。晚上读完了《夜航西飞》第三章，很喜欢她写夜色里引擎声的那一段。</div>
+          </div>
+        </div>
+        <div class="tl-card">
+          <div class="tl-main">
+            <div class="tl-date">8月2日 周日</div>
+            <div class="tl-text">睡到自然醒，做了松饼当早午餐。下午把阳台的多肉重新摆了一遍，扔掉两盆彻底养死的，承认自己不是每种植物都养得活。</div>
+          </div>
+        </div>
+      </div></div>
+
+      <div class="navbar">
+        <div class="nav-item">
+          <div class="nav-ico"><svg viewBox="0 0 24 24"><path d="m14.06 9.02.92.92L5.92 19H5v-.92l9.06-9.06M17.66 3c-.25 0-.51.1-.7.29l-1.83 1.83 3.75 3.75 1.83-1.83a.996.996 0 0 0 0-1.41l-2.34-2.34c-.2-.2-.45-.29-.71-.29zm-3.6 3.19L3 17.25V21h3.75L17.81 9.94l-3.75-3.75z"/></svg></div>
+          <div class="nav-label">今天</div>
+        </div>
+        <div class="nav-item active">
+          <div class="nav-ico"><svg viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zM9 14H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2zm-8 4H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2z"/></svg></div>
+          <div class="nav-label">回顾</div>
+        </div>
+        <div class="nav-item">
+          <div class="nav-ico"><svg viewBox="0 0 24 24"><path d="M19.43 12.98c.04-.32.07-.64.07-.98 0-.34-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46a.5.5 0 0 0-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65A.488.488 0 0 0 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1a.566.566 0 0 0-.18-.03c-.17 0-.34.09-.43.25l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98 0 .33.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.37.29.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.06.02.12.03.18.03.17 0 .34-.09.43-.25l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zm-1.98-1.71c.04.31.05.52.05.73 0 .21-.02.43-.05.73l-.14 1.13.89.7 1.08.84-.7 1.21-1.27-.51-1.04-.42-.9.68c-.43.32-.84.56-1.25.73l-1.06.43-.16 1.13-.2 1.35h-1.4l-.19-1.35-.16-1.13-1.06-.43c-.43-.18-.83-.41-1.23-.71l-.91-.7-1.06.43-1.27.51-.7-1.21 1.08-.84.89-.7-.14-1.13c-.03-.31-.05-.54-.05-.74s.02-.43.05-.73l.14-1.13-.89-.7-1.08-.84.7-1.21 1.27.51 1.04.42.9-.68c.43-.32.84-.56 1.25-.73l1.06-.43.16 1.13.2 1.35h1.39l.19 1.35.16 1.13 1.06.43c.43.18.83.41 1.23.71l.91.7 1.06-.43 1.27-.51.7 1.21-1.07.85-.89.7.14 1.13zM12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 6c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/></svg></div>
+          <div class="nav-label">设置</div>
+        </div>
+      </div>
+      <div class="home"><div class="bar"></div></div>
+    </div></div>
+  </div>
+
+  <!-- ═══════════ ③ 设置 ═══════════ -->
+  <div>
+    <div class="frame-cap">
+      <div class="name">③ 设置</div>
+      <div class="src">lib/pages/settings_page.dart</div>
+      <div class="fict">提醒时间、条目数为虚构示例</div>
+    </div>
+    <div class="bezel"><div class="phone">
+      <div class="statusbar">
+        <span class="time">9:41</span>
+        <span class="ics">
+          <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="0.8"/><rect x="4.5" y="5" width="3" height="6" rx="0.8"/><rect x="9" y="2.5" width="3" height="8.5" rx="0.8"/><rect x="13.5" y="0" width="3" height="11" rx="0.8"/></svg>
+          <svg width="16" height="11" viewBox="0 0 16 12" fill="currentColor"><circle cx="8" cy="10.2" r="1.4"/><path d="M8 6.5c1.9 0 3.6.8 4.8 2L11.4 9.9A4.8 4.8 0 0 0 8 8.5c-1.3 0-2.5.5-3.4 1.4L3.2 8.5A6.8 6.8 0 0 1 8 6.5z"/><path d="M8 2c3 0 5.8 1.2 7.8 3.2l-1.4 1.4A9 9 0 0 0 8 4C5.5 4 3.2 5 1.6 6.6L.2 5.2A11 11 0 0 1 8 2z"/></svg>
+          <svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x="0.5" y="0.5" width="21" height="11" rx="3.5" stroke="currentColor" opacity=".4"/><rect x="2" y="2" width="17" height="8" rx="2" fill="currentColor"/><path d="M23 4v4c1-.3 1.5-1 1.5-2s-.5-1.7-1.5-2z" fill="currentColor" opacity=".4"/></svg>
+        </span>
+      </div>
+
+      <div class="body"><div class="page">
+        <div class="page-title">设置</div>
+
+        <div class="sec-label" style="margin-top:24px">提醒</div>
+        <div class="s-card">
+          <div class="tile">
+            <div class="lead"><svg class="ic" width="24" height="24" viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z"/></svg></div>
+            <div class="tt"><div class="title">每日提醒</div></div>
+            <div class="switch"></div>
+          </div>
+          <div class="divider"></div>
+          <div class="tile two">
+            <div class="lead"><svg class="ic" width="24" height="24" viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg></div>
+            <div class="tt">
+              <div class="title">提醒时间</div>
+              <div class="sub">当天已记录时自动跳过</div>
+            </div>
+            <div class="time">21:30</div>
+          </div>
+        </div>
+
+        <div class="sec-label">数据</div>
+        <div class="s-card">
+          <div class="tile two">
+            <div class="lead"><svg class="ic" width="24" height="24" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zm-8 2V5h2v6h1.17L12 13.17 9.83 11H11zm-6 7h14v2H5z"/></svg></div>
+            <div class="tt">
+              <div class="title">导出备份</div>
+              <div class="sub">12 条日记 · 2 条碎片</div>
+            </div>
+          </div>
+          <div class="divider"></div>
+          <div class="tile two">
+            <div class="lead"><svg class="ic" width="24" height="24" viewBox="0 0 24 24"><path d="M9 16h6v-6h4l-7-7-7 7h4v6zm3-10.17L14.17 8H13v6h-2V8H9.83L12 5.83zM5 18h14v2H5z"/></svg></div>
+            <div class="tt">
+              <div class="title">导入备份</div>
+              <div class="sub">只补充缺少的日期，不覆盖已有记录</div>
+            </div>
+          </div>
+          <div class="divider"></div>
+          <div class="tile">
+            <div class="lead" style="color:var(--danger)"><svg class="ic" width="24" height="24" viewBox="0 0 24 24"><path d="M16 9v10H8V9h8m-1.5-6h-5l-1 1H5v2h14V4h-3.5l-1-1zM18 7H6v12c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7z"/></svg></div>
+            <div class="tt"><div class="title red">清空全部数据</div></div>
+          </div>
+        </div>
+
+        <div class="sec-label">隐私</div>
+        <div class="s-card">
+          <div class="privacy">你的全部记录（文字和照片）只保存在这台设备上。<br>没有服务器，没有账号，没有人能看到你写了什么。<br>也因此：换设备前请先「导出备份」，数据不会自动跟着你走。</div>
+        </div>
+      </div></div>
+
+      <div class="navbar">
+        <div class="nav-item">
+          <div class="nav-ico"><svg viewBox="0 0 24 24"><path d="m14.06 9.02.92.92L5.92 19H5v-.92l9.06-9.06M17.66 3c-.25 0-.51.1-.7.29l-1.83 1.83 3.75 3.75 1.83-1.83a.996.996 0 0 0 0-1.41l-2.34-2.34c-.2-.2-.45-.29-.71-.29zm-3.6 3.19L3 17.25V21h3.75L17.81 9.94l-3.75-3.75z"/></svg></div>
+          <div class="nav-label">今天</div>
+        </div>
+        <div class="nav-item">
+          <div class="nav-ico"><svg viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2zM9 14H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2zm-8 4H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2z"/></svg></div>
+          <div class="nav-label">回顾</div>
+        </div>
+        <div class="nav-item active">
+          <div class="nav-ico"><svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg></div>
+          <div class="nav-label">设置</div>
+        </div>
+      </div>
+      <div class="home"><div class="bar"></div></div>
+    </div></div>
+  </div>
+
+  <!-- ═══════════ ④ 静坐 ═══════════ -->
+  <div>
+    <div class="frame-cap">
+      <div class="name">④ 静坐（全屏路由，无底部导航）</div>
+      <div class="src">lib/pages/meditate_page.dart · 从今天页推入，覆盖整个 HomeShell</div>
+      <div class="fict">剩余分钟数、选中时长为虚构示例；呼吸圆环冻结在动画中段</div>
+    </div>
+    <div class="bezel"><div class="phone dark">
+      <div class="statusbar">
+        <span class="time">9:41</span>
+        <span class="ics">
+          <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="0.8"/><rect x="4.5" y="5" width="3" height="6" rx="0.8"/><rect x="9" y="2.5" width="3" height="8.5" rx="0.8"/><rect x="13.5" y="0" width="3" height="11" rx="0.8"/></svg>
+          <svg width="16" height="11" viewBox="0 0 16 12" fill="currentColor"><circle cx="8" cy="10.2" r="1.4"/><path d="M8 6.5c1.9 0 3.6.8 4.8 2L11.4 9.9A4.8 4.8 0 0 0 8 8.5c-1.3 0-2.5.5-3.4 1.4L3.2 8.5A6.8 6.8 0 0 1 8 6.5z"/><path d="M8 2c3 0 5.8 1.2 7.8 3.2l-1.4 1.4A9 9 0 0 0 8 4C5.5 4 3.2 5 1.6 6.6L.2 5.2A11 11 0 0 1 8 2z"/></svg>
+          <svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x="0.5" y="0.5" width="21" height="11" rx="3.5" stroke="currentColor" opacity=".4"/><rect x="2" y="2" width="17" height="8" rx="2" fill="currentColor"/><path d="M23 4v4c1-.3 1.5-1 1.5-2s-.5-1.7-1.5-2z" fill="currentColor" opacity=".4"/></svg>
+        </span>
+      </div>
+
+      <div class="body">
+        <div class="med-close">
+          <svg class="ic" width="24" height="24" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>
+        </div>
+        <div class="breath-wrap">
+          <div class="breath">
+            <div class="ring"></div>
+            <div class="label">还剩 7 分钟</div>
+          </div>
+        </div>
+        <div class="med-bottom">
+          <div class="med-opts"><span>5</span><span class="sel">10</span><span>15</span><span>20</span></div>
+          <div class="med-abort">提前结束</div>
+        </div>
+      </div>
+
+      <div class="home on-dark"><div class="bar"></div></div>
+    </div></div>
+  </div>
+
+  <!-- ═══════════ ⑤ 随手记浮层（今天页 + 底部弹层） ═══════════ -->
+  <div>
+    <div class="frame-cap">
+      <div class="name">⑤ 随手记浮层（点右下角 ＋ 后）</div>
+      <div class="src">lib/pages/today_page.dart · _openCaptureSheet()</div>
+      <div class="fict">键盘为示意占位（autofocus 会自动唤起系统键盘）</div>
+    </div>
+    <div class="bezel"><div class="phone">
+      <div class="statusbar">
+        <span class="time">9:41</span>
+        <span class="ics">
+          <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="0.8"/><rect x="4.5" y="5" width="3" height="6" rx="0.8"/><rect x="9" y="2.5" width="3" height="8.5" rx="0.8"/><rect x="13.5" y="0" width="3" height="11" rx="0.8"/></svg>
+          <svg width="16" height="11" viewBox="0 0 16 12" fill="currentColor"><circle cx="8" cy="10.2" r="1.4"/><path d="M8 6.5c1.9 0 3.6.8 4.8 2L11.4 9.9A4.8 4.8 0 0 0 8 8.5c-1.3 0-2.5.5-3.4 1.4L3.2 8.5A6.8 6.8 0 0 1 8 6.5z"/><path d="M8 2c3 0 5.8 1.2 7.8 3.2l-1.4 1.4A9 9 0 0 0 8 4C5.5 4 3.2 5 1.6 6.6L.2 5.2A11 11 0 0 1 8 2z"/></svg>
+          <svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x="0.5" y="0.5" width="21" height="11" rx="3.5" stroke="currentColor" opacity=".4"/><rect x="2" y="2" width="17" height="8" rx="2" fill="currentColor"/><path d="M23 4v4c1-.3 1.5-1 1.5-2s-.5-1.7-1.5-2z" fill="currentColor" opacity=".4"/></svg>
+        </span>
+      </div>
+
+      <div class="body">
+        <div class="page page-today">
+          <div class="today-head">
+            <div class="page-title">8月5日 周三</div>
+            <div class="chip-pending">
+              <svg class="ic" width="16" height="16" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5v-3h3.56c.69 1.19 1.97 2 3.45 2s2.75-.81 3.45-2H19v3zm0-5h-4.99c0 1.1-.9 2-2 2s-2-.9-2-2H5V5h14v9z"/></svg>
+              <span>待整理 2</span>
+              <svg class="ic" width="16" height="16" viewBox="0 0 24 24"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6-6-6z"/></svg>
+            </div>
+          </div>
+          <div class="streak">已连续记录 12 天</div>
+          <div class="write-card">
+            <div class="field-area">今天过得怎么样？</div>
+            <div class="add-photo">
+              <svg class="ic" width="20" height="20" viewBox="0 0 24 24"><path d="M18 20H4V6h9V4H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-9h-2v9zm-7.79-3.17-1.96-2.36L5.5 18h11l-3.54-4.71zM20 4V1h-2v3h-3c.01.01 0 2 0 2h3v2.99c.01.01 2 0 2 0V6h3V4h-3z"/></svg>
+              <span>添加照片</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="scrim"></div>
+        <div class="sheet" style="bottom:291px">
+          <div class="sheet-handle"></div>
+          <div class="sheet-field">此刻的想法，随手记下</div>
+          <div class="sheet-actions"><div class="btn-tonal">记下</div></div>
+        </div>
+        <div class="keyboard">键盘占位（示意）</div>
+      </div>
+    </div></div>
+  </div>
+
+</div>
+
+<!-- ═══════════ 说明 ═══════════ -->
+<div class="legend">
+  <h2>色板（ColorScheme.fromSeed #3A5A40，Material 3 tonalSpot 精确计算）</h2>
+  <div class="swatches">
+    <div class="sw"><i style="background:#326941"></i>primary #326941</div>
+    <div class="sw"><i style="background:#D3E8D2"></i>secondaryContainer #D3E8D2</div>
+    <div class="sw"><i style="background:#0E1F12"></i>onSecondaryContainer #0E1F12</div>
+    <div class="sw"><i style="background:#181D18"></i>onSurface #181D18</div>
+    <div class="sw"><i style="background:#414941"></i>onSurfaceVariant #414941</div>
+    <div class="sw"><i style="background:#717970"></i>outline #717970</div>
+    <div class="sw"><i style="background:#C1C9BE"></i>outlineVariant #C1C9BE</div>
+    <div class="sw"><i style="background:#F6F6F4"></i>cardFill #F6F6F4</div>
+    <div class="sw"><i style="background:#B8B8B2"></i>hintColor #B8B8B2</div>
+    <div class="sw"><i style="background:#EBEFE7"></i>surfaceContainer（导航栏底）#EBEFE7</div>
+    <div class="sw"><i style="background:#F44336"></i>Colors.red #F44336</div>
+    <div class="sw"><i style="background:#0E100D"></i>静坐底色 #0E100D</div>
+  </div>
+  <h2>「代码里看不出来、按 Material 3 默认推断」清单</h2>
+  <ul>
+    <li>主色及派生色：源码只有种子色 <code>#3A5A40</code>（main.dart:33），其余色值按 M3 tonalSpot 算法精确算出（primary #326941 等），并非直接用种子色本身。</li>
+    <li>底部导航栏：高 80、底色 surfaceContainer #EBEFE7、选中胶囊 64×32 圆角 16、标签 12px w500 —— 均为 M3 NavigationBar 默认规格。</li>
+    <li>FilledButton「记下今天」：高 56 来自源码 padding 16×2 + 文字行高 24；按钮文字 14px w500（labelLarge），源码只写了 16px 字号。</li>
+    <li>FilledButton.tonal「记下」：高 40、底色 secondaryContainer，M3 默认。</li>
+    <li>FAB：56×56 正圆、+ 图标 24，M3 默认；阴影为 elevation 6 近似。</li>
+    <li>Switch：52×32、开态轨道 primary / 白色圆点，M3 默认。</li>
+    <li>ListTile（设置页）：左右 padding 16、leading 图标宽 40 槽、单行高 56 / 带副标题高 72、标题 16px、副标题默认色 onSurfaceVariant，M3 默认；分割线颜色 outlineVariant。</li>
+    <li>输入框文字/占位字号 16px（M3 TextField 用 bodyLarge），源码未显式指定。</li>
+    <li>IconButton 默认图标色 onSurfaceVariant（日历左右箭头、关闭 ✕ 的槽位 48×48）。</li>
+    <li>底部弹层遮罩 scrim 为 32% 黑（M3 默认）。</li>
+    <li>顶部状态栏与底部 Home 指示条为 iOS 系统界面推断绘制（Flutter 里只有 SafeArea）；键盘为示意占位。</li>
+    <li>静坐页无底部导航栏：它是 MaterialPageRoute 推入的全屏页，覆盖整个 HomeShell（today_page.dart:493-495）。</li>
+    <li>呼吸圆环冻结在动画中段：scale 0.91 / opacity 0.875（动画区间 scale 0.82~1.0、opacity 0.75~1.0，meditate_page.dart:222-226）。</li>
+    <li>页面上未画出的动态元素：SnackBar 提示、回顾页日记详情弹层（radius 24、initialChildSize 0.6）、今天页「待整理」整理弹层、清空数据确认对话框。</li>
+  </ul>
+</div>
+
+</body>
+</html>
