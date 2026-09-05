@@ -1,0 +1,6 @@
+node_modules/
+dist/
+
+# npx cap add ios 生成的原生工程，在 Mac 上生成，不进仓库
+# （注意：这是 app/ios/，和仓库根目录冻结的 Flutter ios/ 是两回事）
+ios/
