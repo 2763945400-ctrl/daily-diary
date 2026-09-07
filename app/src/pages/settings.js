@@ -31,10 +31,35 @@ async function exportBackup() {
     toast('还没有任何记录，无需备份');
     return;
   }
-  // allEntries() 是新→旧；备份文件里按日期正序排，跟手写日记本一个方向，好翻。
-  const data = await buildBackup({ entries: [...entries].reverse(), notes });
-  download(`日记备份-${todayKey()}.json`, JSON.stringify(data));
-  toast(`已导出 ${entries.length} 条日记、${notes.length} 条碎片`);
+
+  // 照片转 base64 和最后的 JSON.stringify 都是同步的大活，主线程会卡住 ——
+  // 实测 100 张照片 / 85 MB 要 9.5 秒。不给提示的话用户以为点了没反应，会再点一次。
+  // 时长写长一点，让它一直挂到下面的成功/失败提示把它顶掉。
+  toast('正在导出…', { duration: 60_000 });
+  await yieldOnce();
+
+  try {
+    // allEntries() 是新→旧；备份文件里按日期正序排，跟手写日记本一个方向，好翻。
+    const data = await buildBackup({ entries: [...entries].reverse(), notes });
+    download(`日记备份-${todayKey()}.json`, JSON.stringify(data));
+    toast(`已导出 ${entries.length} 条日记、${notes.length} 条碎片`);
+  } catch {
+    // 不兜的话上面那条「正在导出…」会一直挂 60 秒，比报错还难受。
+    toast('导出失败了，照片可能太多，删几张再试');
+  }
+}
+
+/**
+ * 让出一轮宏任务，好让「正在导出…」先画出来再开始卡主线程的活。
+ * ⚠️ 别改成 requestAnimationFrame —— 标签页切到后台时它会一直不触发，
+ *    导出就永远停在这一行了。MessageChannel 不受后台节流影响。
+ */
+function yieldOnce() {
+  return new Promise((resolve) => {
+    const ch = new MessageChannel();
+    ch.port1.onmessage = () => resolve();
+    ch.port2.postMessage(0);
+  });
 }
 
 /**
