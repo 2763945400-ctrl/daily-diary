@@ -8,10 +8,13 @@
 
 import { INVALID_BACKUP, buildBackup, readBackup } from '../backup.js';
 import { todayKey } from '../day.js';
-import { allEntries, allNotes, clearAllData, counts, importAll } from '../db.js';
+import {
+  allEntries, allNotes, clearAllData, counts, getSetting, importAll, setSetting,
+} from '../db.js';
 import { closeOverlays, openOverlay } from '../overlay.js';
 import { toast } from '../toast.js';
 import { APP_VERSION } from '../version.js';
+import { DEFAULT_MINUTES } from './meditate.js';
 
 const el = (id) => document.getElementById(id);
 
@@ -21,6 +24,8 @@ let onDataChanged = () => {};
 export async function activate() {
   const { entries, notes } = await counts();
   el('export-sub').textContent = `${entries} 条日记 · ${notes} 条碎片`;
+  // 和静坐页共用同一个值：那边改了时长，这里进来就跟着变
+  el('med-minutes').value = String(await getSetting('meditationMinutes', DEFAULT_MINUTES));
 }
 
 /* ── 导出 ─────────────────────────────────────────────────── */
@@ -122,6 +127,10 @@ async function doClear() {
 export function init(handler) {
   onDataChanged = handler;
   el('app-version').textContent = `每日一记 v${APP_VERSION}`;
+
+  el('med-minutes').addEventListener('change', (event) => {
+    setSetting('meditationMinutes', Number(event.target.value));
+  });
 
   el('export-backup').addEventListener('click', exportBackup);
   el('import-backup').addEventListener('click', () => el('import-input').click());

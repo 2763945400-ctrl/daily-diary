@@ -2,6 +2,7 @@
 // 今天/回顾/设置带底部导航；静坐是全屏页，进去就把导航藏掉。
 
 import { closeOverlays, initOverlays } from './overlay.js';
+import * as meditate from './pages/meditate.js';
 import * as review from './pages/review.js';
 import * as settings from './pages/settings.js';
 import * as today from './pages/today.js';
@@ -35,6 +36,9 @@ function render() {
   today.flush();            // 离开今天页前把没落库的那次写掉
   closeOverlays();
   if (route === 'today') today.activate();
+  // 静坐是唯一一个「离开就要停表」的页，所以两头都接
+  if (route === 'meditate') meditate.activate();
+  else meditate.deactivate();
   if (route === 'review') review.activate();
   if (route === 'settings') settings.activate();
 }
@@ -57,6 +61,7 @@ window.addEventListener('hashchange', render);
 initOverlays();
 today.init();
 review.init();
+meditate.init();
 // 清空 / 导入会动到今天页正在显示的那天，让它整页重来。
 settings.init(today.reset);
 trackKeyboard();

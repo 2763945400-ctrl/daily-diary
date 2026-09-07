@@ -55,7 +55,6 @@ svg.ic { width: 24px; height: 24px; fill: currentColor; display: block; flex: no
   padding: calc(var(--s-8) + env(safe-area-inset-top)) var(--s-4) var(--s-6);
 }
 .page-title { font-size: var(--t-title); line-height: var(--lh-tight); }
-.stub { margin-top: var(--s-2); font-size: var(--t-caption); color: var(--c-text-weak); }
 
 /* ── 今天页 → 静坐 入口 ─────────────────────────────────── */
 
@@ -77,6 +76,11 @@ svg.ic { width: 24px; height: 24px; fill: currentColor; display: block; flex: no
 .med-entry .t2 { display: block; font-size: var(--t-caption); }
 
 /* ── 静坐页（全屏沉浸，无底部导航）───────────────────────── */
+/* 几何照 design/screens frame ④。两处照 tokens 没照设计稿：
+   设计稿的 17px / 15px 不在 tokens 的 5 级字号里（准则「只有 5 级」），
+   就近落到 --t-body / --t-label，差 1px 看不出来；
+   选中的时长设计稿是纯白，这里用 --c-dark-text（65%），
+   和未选中的 25% 拉开已经够清楚，也不用为它单开一个 100% 白的 token。 */
 
 .page-dark {
   position: relative;
@@ -84,15 +88,106 @@ svg.ic { width: 24px; height: 24px; fill: currentColor; display: block; flex: no
   color: var(--c-dark-text);
 }
 .med-close {
+  position: absolute;
+  top: calc(var(--s-1) + env(safe-area-inset-top));
+  left: var(--s-1);
   display: flex;
   align-items: center;
   justify-content: center;
   width: 48px;
   height: 48px;
-  margin-left: calc(var(--s-3) * -1);
   color: var(--c-dark-weak);
 }
-.stub-dark { color: var(--c-dark-weak); }
+
+.breath-wrap {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.breath { position: relative; width: 220px; height: 220px; }
+
+.breath-ring {
+  position: absolute;
+  inset: 0;
+  border: 1px solid color-mix(in srgb, var(--c-breath) 25%, transparent);
+  border-radius: 50%;
+  background: radial-gradient(circle,
+    color-mix(in srgb, var(--c-breath) 45%, transparent) 0%,
+    color-mix(in srgb, var(--c-breath) 15%, transparent) 65%,
+    transparent 100%);
+  animation: breathe var(--d-breath) linear infinite;
+}
+
+/* ⚠️ 规格第九节点名的坑：--d-breath 是 14s，一个完整的「涨→缩」。
+   0%→50% 涨、50%→100% 缩，**绝不能再加 alternate**，加了周期就翻成 28 秒。
+   缓动写在关键帧里而不是整条动画上 —— 老版本是 7 秒的 controller 配
+   repeat(reverse) + easeInOut，等于每半程各自缓入缓出，写在外面对不上。 */
+@keyframes breathe {
+  0%   { transform: scale(.82); opacity: .75; animation-timing-function: ease-in-out; }
+  50%  { transform: scale(1);   opacity: 1;   animation-timing-function: ease-in-out; }
+  100% { transform: scale(.82); opacity: .75; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .breath-ring { animation: none; transform: scale(.91); opacity: .875; }
+}
+
+.breath-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--c-dark-weak);
+}
+
+/* 沉进去之后让画面自己退开一档。
+   ⚠️ 网页拿不到屏幕亮度的控制权（浏览器不给这个 API），能做的只有压暗画面本身 ——
+      OLED 屏上黑得更彻底就是真省电，观感也接近。
+   压暗时底部控件和 ✕ 一并不可点：摸黑随手一碰就把时长重置了才叫难受，
+   第一下只负责把画面唤回来。 */
+.breath-wrap,
+.med-bottom,
+.med-close { transition: opacity var(--d-slow) var(--ease); }
+
+.page-dark.is-dimmed .breath-wrap,
+.page-dark.is-dimmed .med-bottom,
+.page-dark.is-dimmed .med-close { opacity: .35; }
+.page-dark.is-dimmed .med-bottom,
+.page-dark.is-dimmed .med-close { pointer-events: none; }
+
+.med-bottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--s-6) + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.med-opts { display: flex; }
+.med-opts button {
+  min-height: 44px;
+  padding: 0 var(--s-4);
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: var(--t-label);
+  color: var(--c-dark-dimmer);
+}
+.med-opts button.is-sel { color: var(--c-dark-text); font-weight: 600; }
+
+.med-abort {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  padding: 0 var(--s-3);
+  font-size: var(--t-label);
+  font-weight: 500;
+  color: var(--c-dark-dimmer);
+}
 
 /* ── 底部导航 ───────────────────────────────────────────── */
 /* 几何照 app/design/screens（高 80、胶囊 64×32、图标 24、标签 12），
@@ -526,6 +621,16 @@ svg.ic { width: 24px; height: 24px; fill: currentColor; display: block; flex: no
   height: 1px;
   margin-left: calc(var(--s-4) + 24px + var(--s-4));
   background: var(--c-border);
+}
+
+.tile-select {
+  flex: none;
+  min-height: 44px;
+  padding: 0 var(--s-2);
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--c-text);
 }
 
 .privacy { padding: var(--s-4); font-size: var(--t-caption); color: var(--c-text-weak); }
