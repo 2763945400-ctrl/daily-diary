@@ -1,9 +1,7 @@
 // 设置页。这一步只做设计稿 frame ③ 里的「数据」组和「隐私」组，外加版本号。
 //
-// 特意没做的四样（不是漏掉）：
+// 特意没做的两样（不是漏掉）：
 //   提醒组 —— 归第 6 步，要 Capacitor 本地通知，且网页版根本给不了
-//   静坐默认时长 —— 归第 5 步
-//   清除缓存并重新加载 —— 依赖第 7 步的 Service Worker
 //   提点意见 —— 等用户建好问卷给链接
 
 import { INVALID_BACKUP, buildBackup, readBackup } from '../backup.js';
@@ -12,6 +10,7 @@ import {
   allEntries, allNotes, clearAllData, counts, getSetting, importAll, setSetting,
 } from '../db.js';
 import { closeOverlays, openOverlay } from '../overlay.js';
+import { IS_WEB } from '../platform.js';
 import { toast } from '../toast.js';
 import { APP_VERSION } from '../version.js';
 import { DEFAULT_MINUTES } from './meditate.js';
@@ -122,6 +121,30 @@ async function doClear() {
   toast('已清空');
 }
 
+/* ── 清除缓存（仅网页版） ─────────────────────────────────── */
+
+/**
+ * 清掉网页外壳本身的缓存（Service Worker 注册 + Cache Storage），然后重新加载。
+ *
+ * ⚠️ 一个字节都不碰 IndexedDB —— 日记、碎片、设置全在那里。
+ *    磁贴的副标题就是在保证这件事，改文案时别把这层意思弄丢了。
+ *
+ * 用途是自救：新版本发了却一直卡在旧版本，或者缓存本身坏了打不开。
+ */
+async function clearCacheAndReload() {
+  toast('正在清除缓存…', { duration: 60_000 });
+  try {
+    const regs = await (navigator.serviceWorker?.getRegistrations() ?? []);
+    await Promise.all(regs.map((reg) => reg.unregister()));
+    const keys = await caches.keys();
+    await Promise.all(keys.map((key) => caches.delete(key)));
+  } catch {
+    // 清不干净也照样重载：至少浏览器那层普通 HTTP 缓存有机会刷新，
+    // 而且这个按钮存在的意义就是「卡住了给条出路」，不该在这里卡第二次。
+  }
+  location.reload();
+}
+
 /* ── 接线 ─────────────────────────────────────────────────── */
 
 export function init(handler) {
@@ -135,6 +158,13 @@ export function init(handler) {
   el('export-backup').addEventListener('click', exportBackup);
   el('import-backup').addEventListener('click', () => el('import-input').click());
   el('import-input').addEventListener('change', importBackup);
+
+  // 原生壳里资源本来就在本地，没有 Service Worker 也没有可清的缓存（规格第八节：仅网页版）
+  if (IS_WEB) {
+    el('web-label').hidden = false;
+    el('web-card').hidden = false;
+    el('clear-cache').addEventListener('click', clearCacheAndReload);
+  }
 
   el('clear-all').addEventListener('click', () => openOverlay('confirm-clear'));
   el('confirm-cancel').addEventListener('click', closeOverlays);

@@ -1,5 +1,14 @@
 # 编译网页版并发布到 GitHub Pages
 # 只管网页版，iOS 打包在 ios-build.yml，两条流水线互不影响
+#
+# ⚠️ 一个仓库只有一份 GitHub Pages 站点，deploy-pages 是**整站替换**。
+#    所以「新旧并存」不能拆成两条流水线（会互相覆盖），必须在这一条里
+#    把两份产物拼成一个目录再上传：
+#
+#      /daily-diary/         ← 老的 Flutter 网页版（4.4 MB），保留作退路
+#      /daily-diary/next/    ← 新的原生重写版（约 14 KB + Service Worker）
+#
+#    等 next/ 在大陆实测没问题了，再把它挪到根路径、删掉 Flutter 那几步。
 name: Deploy Web
 
 on:
@@ -11,6 +20,7 @@ on:
       - 'web/**'
       - 'assets/**'
       - 'pubspec.yaml'
+      - 'app/**'
       - '.github/workflows/web-deploy.yml'
 
 # 发布 Pages 所需的最小权限
@@ -30,6 +40,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # ── 老版（Flutter）→ 站点根路径 ──────────────────────────
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
@@ -45,12 +56,40 @@ jobs:
       # 国内连不上就一直白屏且不报错。加这个参数改成打包进自己的站点。
       - run: flutter build web --release --base-href /daily-diary/ --no-web-resources-cdn
 
+      # ── 新版（Vite）→ /next/ 子目录 ─────────────────────────
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      # npm ci 而不是 npm install：按 package-lock.json 装死版本，
+      # CI 里装出来的和本地验过的必须是同一套
+      - run: npm ci
+        working-directory: app
+
+      - run: npm test
+        working-directory: app
+
+      # app/vite.config.js 的 base 是相对路径 './'，所以放进哪个子目录都不用改配置
+      - run: npm run build
+        working-directory: app
+
+      # ── 拼成一个站点 ────────────────────────────────────────
+      - name: 合并两份产物
+        run: |
+          mkdir -p _site
+          cp -r build/web/. _site/
+          mkdir -p _site/next
+          cp -r app/dist/. _site/next/
+          ls -la _site _site/next
+
       # 前提：仓库 Settings → Pages → Source 已选 "GitHub Actions"
       - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: build/web
+          path: _site
 
   deploy:
     needs: build
