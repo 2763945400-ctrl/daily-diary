@@ -3,9 +3,10 @@ import { readFileSync } from 'node:fs';
 import { defineConfig } from 'vite';
 
 // public/ 里额外要进预缓存的东西。
-// 图标（共 13.5 KB）**故意不进**：只有「添加到主屏幕」那一刻才用得上，
-// 而那一刻必然在线；进了预缓存就等于每个首次访问都白下 13.5 KB。
-const EXTRA_PRECACHE = ['manifest.webmanifest'];
+// Icon-192 进：它同时兼任 favicon，浏览器每次打开都会要，离线要不到就会让
+// iOS 弹「关闭飞行模式」的系统框（2026-09-07 真机实测到的）。5.3 KB 值这个钱。
+// Icon-512 不进：只有「添加到主屏幕」那一刻才用得上，而那一刻必然在线。
+const EXTRA_PRECACHE = ['manifest.webmanifest', 'icons/Icon-192.png'];
 
 /**
  * 构建时生成 dist/sw.js：把真实的产物清单和一个内容版本戳注进 src/sw.js 模板。

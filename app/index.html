@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>每日一记</title>
 <meta name="theme-color" content="#3A5A40">
+<!-- 必须显式声明，否则浏览器会去**站点根目录**要 /favicon.ico ——
+     那在 Service Worker 作用域(/daily-diary/next/)之外，拦不到，
+     离线时直接走网络失败，iOS 会弹「关闭飞行模式」的系统框 -->
+<link rel="icon" href="./icons/Icon-192.png">
 <link rel="manifest" href="./manifest.webmanifest">
 <!-- iOS 不看 manifest 的 icons，主屏图标只认 apple-touch-icon -->
 <link rel="apple-touch-icon" href="./icons/Icon-192.png">
