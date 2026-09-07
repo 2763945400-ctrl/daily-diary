@@ -1,25 +1,17 @@
 # 编译网页版并发布到 GitHub Pages
 # 只管网页版，iOS 打包在 ios-build.yml，两条流水线互不影响
 #
-# ⚠️ 一个仓库只有一份 GitHub Pages 站点，deploy-pages 是**整站替换**。
-#    所以「新旧并存」不能拆成两条流水线（会互相覆盖），必须在这一条里
-#    把两份产物拼成一个目录再上传：
-#
-#      /daily-diary/         ← 老的 Flutter 网页版（4.4 MB），保留作退路
-#      /daily-diary/next/    ← 新的原生重写版（约 14 KB + Service Worker）
-#
-#    等 next/ 在大陆实测没问题了，再把它挪到根路径、删掉 Flutter 那几步。
+# 2026-09-07 起只发新版（app/ 的原生重写，约 21 KB）。
+# 老的 Flutter 网页版（4.4 MB）不再编译上网 —— 但 lib/ web/ assets/ pubspec.yaml
+# **全部原样留在仓库里**（规格第四节：新版验证通过前不许删任何东西）。
+# 真要回滚就是把这个文件恢复到 87187cc 那一版，Flutter 网页版会原样回来。
 name: Deploy Web
 
 on:
   workflow_dispatch: # 手动触发
   push:
     branches: [master]
-    paths: # 只有代码变了才编译，改文档不浪费时间
-      - 'lib/**'
-      - 'web/**'
-      - 'assets/**'
-      - 'pubspec.yaml'
+    paths: # Flutter 不再参与网页版，改 lib/ 不该再触发部署
       - 'app/**'
       - '.github/workflows/web-deploy.yml'
 
@@ -40,23 +32,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # ── 老版（Flutter）→ 站点根路径 ──────────────────────────
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          flutter-version: 3.44.4
-          cache: true
-
-      - run: flutter pub get
-
-      # base-href 必须写成 /仓库名/，项目页网址是 用户名.github.io/仓库名/
-      # 少了这个，打开是白屏
-      #
-      # --no-web-resources-cdn：渲染引擎 CanvasKit(约 7MB) 默认从 www.gstatic.com 下载，
-      # 国内连不上就一直白屏且不报错。加这个参数改成打包进自己的站点。
-      - run: flutter build web --release --base-href /daily-diary/ --no-web-resources-cdn
-
-      # ── 新版（Vite）→ /next/ 子目录 ─────────────────────────
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -71,25 +46,17 @@ jobs:
       - run: npm test
         working-directory: app
 
-      # app/vite.config.js 的 base 是相对路径 './'，所以放进哪个子目录都不用改配置
+      # app/vite.config.js 的 base 是相对路径 './'，
+      # 所以发到根路径还是子路径都不用改配置
       - run: npm run build
         working-directory: app
-
-      # ── 拼成一个站点 ────────────────────────────────────────
-      - name: 合并两份产物
-        run: |
-          mkdir -p _site
-          cp -r build/web/. _site/
-          mkdir -p _site/next
-          cp -r app/dist/. _site/next/
-          ls -la _site _site/next
 
       # 前提：仓库 Settings → Pages → Source 已选 "GitHub Actions"
       - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: _site
+          path: app/dist
 
   deploy:
     needs: build
